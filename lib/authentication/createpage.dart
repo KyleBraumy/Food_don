@@ -10,11 +10,13 @@ import 'package:sates/authentication/createpage2.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:sates/authentication/auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:sates/startup/wrapper.dart';
 import 'dart:async';
 
 import 'package:uuid/uuid.dart';
 
 import '../main_pages/home.dart';
+import '../widgets/constant_widgets.dart';
 
 
 final storageRef = FirebaseStorage.instance.ref('Images');
@@ -183,6 +185,8 @@ class _createpageState extends State<createpage> {
                    child: Text('Create an account',
                      textAlign: TextAlign.center,
                      style: TextStyle(
+                       fontFamily: 'Gotham',
+                       fontWeight: FontWeight.bold,
                        color: Colors.green,
                        fontSize:30,
                      ),
@@ -196,40 +200,45 @@ class _createpageState extends State<createpage> {
                  Padding(
                    padding: const EdgeInsets.only(left:30,right:30,bottom: 20),
                    child: Container(
-                     height:size.height/17,
-                     child: TextFormField(
-                       validator: (val)=>val!.isEmpty?'Enter an email':null,
-                       onChanged: (val){
-                         setState(() => email=val);
-                       },
-                       decoration: InputDecoration(
-                         prefixIcon: Icon(Icons.mail_outline),
-                         hintText: 'Enter your email ',labelText: 'Email',border: OutlineInputBorder(
-                         borderRadius: BorderRadius.circular(10),
-                       ),
-                       ),
+                     decoration: BoxDecoration(
+                         color: Colors.green.shade50,
+                         borderRadius: BorderRadius.circular(20)
+                     ),
+                     child: Padding(
+                       padding: EdgeInsets.only(left:12.0),
+                       child: TextFormField(
+                         validator: (val)=>val!.isEmpty?'Enter an email':null,
+                         onChanged: (val){
+                           setState(() => email=val);
+                         },
+                         decoration: InputDecoration(
+                         labelText: 'Email',border: InputBorder.none
+                         ),
 
+                       ),
                      ),
                    ),
                  ),
                  ///password
                  Padding(
-                   padding: const EdgeInsets.only(left:30,right:30,bottom: 20),
+                   padding: EdgeInsets.only(left:30,right:30,bottom: 20),
                    child: Container(
-                     height:size.height/17,
-                     child: TextFormField(
-                       validator: (val)=>val!.length< 6 ?'Enter a password 6+ chars long':null,
-                       onChanged: (val){
-                         setState(() => password=val);
-                       },
-
-                       decoration: InputDecoration(
-                         prefixIcon: Icon(Icons.lock_open),
-                         hintText: 'Create Password',labelText: 'Password',border: OutlineInputBorder(
-                         borderRadius: BorderRadius.circular(10),
+                     decoration: BoxDecoration(
+                         color: Colors.green.shade50,
+                         borderRadius: BorderRadius.circular(20)
+                     ),
+                     child: Padding(
+                       padding: EdgeInsets.only(left:12.0),
+                       child: TextFormField(
+                         validator: (val)=>val!.length< 6 ?'Enter a password 6+ chars long':null,
+                         onChanged: (val){
+                           setState(() => password=val);
+                         },
+                         decoration: InputDecoration(
+                          labelText: 'Password',border:InputBorder.none
+                         ),
+                         obscureText: true,
                        ),
-                       ),
-                       obscureText: true,
                      ),
                    ),
                  ),
@@ -239,58 +248,6 @@ class _createpageState extends State<createpage> {
                    child: SizedBox(
                    ),
                  ),
-                 //error
-                 Container(
-                   margin: EdgeInsets.only(top: 5),
-                   alignment: Alignment.center,
-                   child: Column(
-                     mainAxisAlignment: MainAxisAlignment.start,
-                     children: [
-                       GestureDetector(
-                         onTap: () async{
-                           Navigator.pushReplacement(context,
-                               MaterialPageRoute(builder: (context)=> createpage2(email: email, password: password)));
-
-                           /*if (_formKey.currentState!.validate()){
-                            // dynamic result = await _auth.registerWithEmailandPassword(email, password,username,profilePhotoUrl);
-                             if (result == null){
-                               setState(()=>error = 'Please supply a valid email\nor Connect to the internet\nAnd try again.');
-                             }else{
-                               Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=> home()));
-                             }
-                           }*/
-                         },
-                         child: Container(
-                           alignment: Alignment.center,
-                           margin: EdgeInsets.all(9),
-                           decoration: BoxDecoration(
-                             color: Colors.deepOrange,
-                             borderRadius: BorderRadius.circular(15),
-                             boxShadow: [
-                               BoxShadow(
-                                 color: Colors.yellow.withOpacity(0.5),
-                                 spreadRadius: 5,
-                                 blurRadius: 7,
-                                 offset: Offset(0,1),
-                               ),
-                             ],
-                           ),
-                           height: size.height/20,
-                           width: size.width/3,
-                           child: Text(
-                             'Done',
-                             style: TextStyle(
-                               fontSize: 14,
-                               color: Colors.white,
-                             ),
-                           ),
-
-                         ),
-                       ),
-                     ],
-                   ),
-                 ),
-                 //create account
                  //error
                  Text(error),
 
@@ -302,14 +259,22 @@ class _createpageState extends State<createpage> {
       floatingActionButton: FloatingActionButton.extended(
         isExtended: true,
         onPressed: ()async{
-          Navigator.pushReplacement(context,
-              MaterialPageRoute(builder: (context)=> createpage2(email: email, password: password)));
-        }, label:Text(
-        'Done',
-        style: TextStyle(
-          fontSize: 14,
-          color: Colors.white,
-        ),
+          if (_formKey.currentState!.validate()){
+            dynamic result = await _auth.registerWithEmailandPassword(
+                email,
+                password,);
+
+            if (result == null){
+              setState(()=>error = 'Please supply a valid email\nor Connect to the internet\nAnd try again.');
+            }else{
+              final currentUserId= FirebaseAuth.instance.currentUser!.uid;
+              Navigator.pushReplacement(context,
+                  MaterialPageRoute(builder: (context)=> Wrapper(id:currentUserId)));
+            }
+
+          }
+        }, label:CustomText4(
+          'Done',Colors.white
       ),
       ),
 

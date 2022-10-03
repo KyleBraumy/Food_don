@@ -4,6 +4,9 @@ import 'package:sates/startup/startpage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:sates/authentication/auth.dart';
+import 'package:sates/startup/wrapper.dart';
+
+import '../widgets/constant_widgets.dart';
 
 class signin extends StatefulWidget {
   final Function? toggleView;
@@ -72,6 +75,8 @@ class _signinState extends State<signin> {
                                       'Create Account',
                                       style: TextStyle(
                                         fontSize: 14,
+                                        fontFamily: 'Gotham',
+                                        fontWeight: FontWeight.bold,
                                         color: Colors.white,
                                       ),
                                     ),
@@ -88,6 +93,8 @@ class _signinState extends State<signin> {
                 Text('Sign In',
                   textAlign: TextAlign.center,
                   style: TextStyle(
+                    fontFamily: 'Gotham',
+                    fontWeight: FontWeight.bold,
                     color: Colors.green,
                     fontSize:30,
                   ),
@@ -100,19 +107,22 @@ class _signinState extends State<signin> {
                 Padding(
                   padding:EdgeInsets.only(left:30,right:30,bottom: 20),
                   child: Container(
-                    height:size.height/17,
-                    child: TextFormField(
-                      validator: (val)=>val!.isEmpty?'Enter an email':null,
-                      onChanged: (val){
-                        setState(() => email=val);
-                      },
-                      decoration: InputDecoration(
-                        prefixIcon: Icon(Icons.mail_outline),
-                        hintText: 'Enter your email ',labelText: 'Email',border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      ),
+                    decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(20)
+                    ),
+                    child: Padding(
+                      padding: EdgeInsets.only(left:12.0),
+                      child: TextFormField(
+                        validator: (val)=>val!.isEmpty?'Enter an email':null,
+                        onChanged: (val){
+                          setState(() => email=val);
+                        },
+                        decoration: InputDecoration(
+                          labelText: 'Email',border: InputBorder.none
+                        ),
 
+                      ),
                     ),
                   ),
                 ),
@@ -120,20 +130,23 @@ class _signinState extends State<signin> {
                 Padding(
                   padding:EdgeInsets.only(left:30,right:30,bottom: 10),
                   child: Container(
-                    height:size.height/17,
-                    child: TextFormField(
-                      validator: (val)=>val!.length< 6 ?'Enter a password 6+ chars long':null,
-                      onChanged: (val){
-                        setState(() => password=val);
-                      },
+                    decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(20)
+                    ),
+                    child: Padding(
+                      padding: EdgeInsets.only(left:12.0),
+                      child: TextFormField(
+                        validator: (val)=>val!.length< 6 ?'Enter a password 6+ chars long':null,
+                        onChanged: (val){
+                          setState(() => password=val);
+                        },
 
-                      decoration: InputDecoration(
-                        prefixIcon: Icon(Icons.lock_open),
-                        hintText: 'Create Password',labelText: 'Password',border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        decoration: InputDecoration(
+                        hintText: 'Create Password',labelText: 'Password',border: InputBorder.none
+                        ),
+                        obscureText: true,
                       ),
-                      ),
-                      obscureText: true,
                     ),
                   ),
                 ),
@@ -144,56 +157,6 @@ class _signinState extends State<signin> {
 
                   ),
                 ),
-                Container(
-                  margin: EdgeInsets.only(top: 5),
-                  alignment: Alignment.center,
-                  child: Column(
-
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: [
-                      GestureDetector(
-                        onTap: () async{
-                          if (_formKey.currentState!.validate()){
-                            dynamic result = await _auth.signInWithEmailandPassword(email, password);
-                            if (result == null){
-                              setState(()=>error = 'The User with this credentials could not be found');
-                            }else{
-                              Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=> home()));
-                            }
-
-                          }
-
-                        },
-                        child: Container(
-                          alignment: Alignment.center,
-                          margin: EdgeInsets.all(9),
-                          decoration: BoxDecoration(
-                            color: Colors.deepOrange,
-                            borderRadius: BorderRadius.circular(15),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.yellow.withOpacity(0.5),
-                                spreadRadius: 5,
-                                blurRadius: 7,
-                                offset: Offset(0,1),
-                              ),
-                            ],
-                          ),
-                          height: size.height/20,
-                          width: size.width/3,
-                          child: Text(
-                            'Done',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.white,
-                            ),
-                          ),
-
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
                 Text(error),
               ],
             ),
@@ -201,6 +164,23 @@ class _signinState extends State<signin> {
         ),
       ),
 
+      floatingActionButton: FloatingActionButton.extended(
+        isExtended: true,
+        onPressed: ()async{
+          if (_formKey.currentState!.validate()){
+            dynamic result = await _auth.signInWithEmailandPassword(email, password);
+            if (result == null){
+              setState(()=>error = 'The User with this credentials could not be found');
+            }else{
+              Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=> Wrapper()));
+            }
+
+          }
+
+        }, label:CustomText4(
+        'Done',Colors.white
+      ),
+      ),
 
     );
   }

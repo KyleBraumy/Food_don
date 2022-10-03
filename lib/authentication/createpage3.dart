@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:image/image.dart'as Im;
 import 'package:path_provider/path_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:sates/startup/wrapper.dart';
 import 'package:uuid/uuid.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -17,8 +18,7 @@ import '../widgets/progress.dart';
 
 
 class Createpage3 extends StatefulWidget {
-  String email;
-  String password;
+
   String fName;
   String lName;
   String address;
@@ -27,13 +27,12 @@ class Createpage3 extends StatefulWidget {
   String? works_at;
   String street_name;
   String phone1;
-  String phone2;
+  String? phone2;
   String city;
 
 
   Createpage3({
-    required this.email,
-    required this.password,
+
     required this.fName,
     required this.lName,
     required this.address,
@@ -62,8 +61,8 @@ class _Createpage3State extends State<Createpage3> {
   final AuthService _auth = AuthService();
   final _formkey= GlobalKey<FormState>();
   bool isUploading=false;
-  String postId=Uuid().v4();
-  final currentUser= FirebaseAuth.instance.currentUser;
+  String profilepicId=Uuid().v4();
+  final currentUserId= FirebaseAuth.instance.currentUser!.uid;
 
 
   File? file;
@@ -124,46 +123,74 @@ class _Createpage3State extends State<Createpage3> {
     final path = tempDir.path;
     //Read Image File We Have In State Putting It In imageFile
     Im.Image? imageFile = Im.decodeImage(file!.readAsBytesSync());
-    final compressesImageFile = File('$path/img_$postId.jpg')
+    final compressesImageFile = File('$path/img_$profilepicId.jpg')
       ..writeAsBytesSync(Im.encodeJpg(imageFile!, quality: 50));
     setState(() {
       file = compressesImageFile;
     });
   }
+  Future<String> uploadImage(imageFile) async {
+    UploadTask uploadTask =
+    storageRef.child('post_$profilepicId.jpg').putFile(imageFile);
+    TaskSnapshot storageSnap = await uploadTask;
+    String downloadUrl = await storageSnap.ref.getDownloadURL();
+    return downloadUrl;
+  }
+
+
+ createUserDetails({var timestamp, String? profilephotoUrl,
+   String? bio, String? lname, String? fName, String? occupation,
+   String? address, String? identify_as, String? works_at, String? street_name,
+   String? phone1, String? phone2, String? city
+ })  {
+     usersRef.doc(currentUserId).update({
+      'Timestamp':timestamp,
+      'ProfilePhotoUrl':profilephotoUrl,
+      'BackProfilePhotoUrl':"",
+      'Bio':bio,
+      'Address':address,
+      'First Name':fName,
+      'Last Name':lname,
+      'Occupation':occupation,
+      'Identify_as':identify_as,
+      'No_ppl_rated':0,
+      'Rating':"0.0",
+      'Rating_value':"0.0",
+      'Works_at':works_at,
+      'Street name':street_name,
+      'City':city,
+      'Contact 1':phone1,
+      'Contact 2':phone2,
+    });
+  }
 
   handleSubmit()async{
+    final DateTime timestamp= DateTime.now();
     setState((){
       isUploading=true;
     });
-
     await compressImage();
+    String profilePhotoUrl=await uploadImage(file);
 
-   dynamic result = await _auth.registerWithEmailandPassword(
-     widget.email,
-     widget.password,
-     bio,
-     widget.address,
-     widget.fName,
-     widget.lName,
-     widget.occupation,
-     file,
-     widget.identify_as,
-     widget.works_at,
-     widget.street_name,
-     widget.phone1,
-     widget.phone2,
-     widget.city,
+createUserDetails(timestamp:timestamp,
+    profilephotoUrl:profilePhotoUrl,
+    bio:bio,
+    lname:widget.lName,
+    fName:widget.fName,
+    occupation:widget.occupation,
+    address:widget.address,
+    identify_as:widget.identify_as,
+    works_at:widget.works_at,
+    street_name:widget.street_name,
+    phone1:widget.phone1,
+    phone2:widget.phone2,
+    city:widget.city,
+);
+    setState((){
+      isUploading=false;
+    });
 
-   );
-     if (result == null){
-       setState((){
-         isUploading=false;
-         postId=Uuid().v4();
-       });
-     setState(()=>error = 'Please supply a valid email\nor Connect to the internet\nAnd try again.');
-   }else{
-     Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=> home()));
-   };
+    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=> Wrapper()));
 
 
   }

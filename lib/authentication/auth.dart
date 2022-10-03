@@ -37,9 +37,7 @@ class AuthService{
 
 
   //Register with email&password
-  Future registerWithEmailandPassword(String email,String password,String bio,String address,String fname,String lname,
-      String occupation, File? file,String identify_as,String? works_at,String street_name,
-      String phone1,String phone2,String city
+  Future registerWithEmailandPassword(String email,String password,
       ) async{
     try{
     UserCredential result = await _auth.createUserWithEmailAndPassword(email: email,
@@ -47,14 +45,9 @@ class AuthService{
 
     );
     User? user = result.user;
-    String profilePhotoUrl=await uploadImage(file);
+    //String profilePhotoUrl=await uploadImage(file);
     //create a document for user
-    //await DatabaseService(uid:user!.uid).updateUserDetails('Benjamin', 'GD-067-0372');
-    await DatabaseService(uid: user!.uid).createUserDetails(user.uid,timestamp,email,
-      profilePhotoUrl,bio,fname,lname,occupation,address,identify_as,works_at,
-      street_name,phone1,phone2,city
-    );
-    String profilepicId=Uuid().v4();
+    await DatabaseService(uid:user!.uid).createUserInfo(email);
     return _userFromUser(user);
     }catch(e){
       print(e.toString());
@@ -71,13 +64,13 @@ class AuthService{
      return null;
    }
  }
- String profilepicId=Uuid().v4();
+/* String profilepicId=Uuid().v4();
  Future<String> uploadImage(imageFile) async {
    UploadTask uploadTask =
    storageRef.child('post_$profilepicId.jpg').putFile(imageFile);
    TaskSnapshot storageSnap = await uploadTask;
    String downloadUrl = await storageSnap.ref.getDownloadURL();
    return downloadUrl;
- }
+ }*/
 
 }

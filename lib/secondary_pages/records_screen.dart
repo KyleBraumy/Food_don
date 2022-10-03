@@ -6,6 +6,7 @@ import 'package:sates/models/post.dart';
 import 'package:titled_navigation_bar/titled_navigation_bar.dart';
 
 import '../models/userfiles.dart';
+import '../widgets/constant_widgets.dart';
 
 class Records extends StatefulWidget {
   const Records({Key? key}) : super(key: key);
@@ -22,10 +23,28 @@ class _RecordsState extends State<Records> {
   final usersRef = FirebaseFirestore.instance.collection('users');
   final postsRef = FirebaseFirestore.instance.collection('posts');
   final postsTimelineRef = FirebaseFirestore.instance.collection('postsTimeline');
+  List<Post>posts=[];
+
+  getPost()async{
+    QuerySnapshot snapshot=
+    await postsRef
+        .doc(currentUserId)
+        .collection('userposts')
+        .where('PostId', isEqualTo:p_Id.toString())
+        .get();
+
+
+    List<Post> posts=snapshot.docs.map((doc)=>Post.fromDocument(doc))
+        .toList();
+    this.posts=posts;
 
 
 
 
+
+  }
+
+var p_Id;
   ///pending approvals list getter
   buildPendingApprovalsList(){
     return StreamBuilder<QuerySnapshot?>(
@@ -68,12 +87,14 @@ class _RecordsState extends State<Records> {
                 .map((DocumentSnapshot document){
               Map<String, dynamic> data=
               document.data()! as Map<String,dynamic>;
-
-
               return Container(
-                height: 150,
+                height: 160,
                 margin: EdgeInsets.all(8),
-                color: Colors.white,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(7),
+                  color: Colors.white,
+                ),
+
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -81,10 +102,8 @@ class _RecordsState extends State<Records> {
                       children: [
                         Padding(
                           padding: const EdgeInsets.only(top:8.0,left:8),
-                          child: Text('Did you receive the package from',
-                            style: TextStyle(
-                                color: Colors.black
-                            ),
+                          child: CustomText7('Did you receive the package from',
+
                           ),
                         ),
                         Expanded(child: SizedBox()),
@@ -93,24 +112,30 @@ class _RecordsState extends State<Records> {
                               isScrollControlled: true,
                               context: context,
                               builder: (BuildContext context){
-                                return DraggableScrollableSheet(
-                                    expand: false,
-                                    initialChildSize: 0.6,
-                                    minChildSize: 0.4,
-                                    maxChildSize: 0.9,
-                                    builder: (BuildContext context, ScrollController scrollcontroller){
-                                      return PostView(postId: data['PostId'].toString(),Id:data['From'].toString(),);
+                                p_Id=data['PostId'].toString();
+                                getPost();
+                                return FutureBuilder(
+                                    future:getPost(),
+                                    builder: (context, snapshot) {
+                                      return DraggableScrollableSheet(
+                                          expand: false,
+                                          initialChildSize: 0.6,
+                                          minChildSize: 0.4,
+                                          maxChildSize: 0.9,
+                                          builder: (BuildContext context, ScrollController scrollcontroller){
+                                            return ListView(
+                                              children:posts,
+                                            );
+                                          }
+                                      );
                                     }
                                 );
                               }
                           ),
-
                           child: Padding(
-                            padding: const EdgeInsets.only(top:8.0,left:8),
-                            child: Text('View post',
-                              style: TextStyle(
-                                  color: Colors.green
-                              ),
+                            padding:EdgeInsets.only(right:8,top: 8),
+                            child: CustomText4('View post',
+                                Colors.green
                             ),
                           ),
                         ),
@@ -128,28 +153,25 @@ class _RecordsState extends State<Records> {
                           var DocData = snapshot.data as DocumentSnapshot;
                           GUser gUser = GUser.fromDocument(DocData);
                           return Padding(
-                            padding: const EdgeInsets.all(20.0),
+                            padding: const EdgeInsets.fromLTRB(20.0,15,20,5),
                             child:Row(
                               children: [
-                                CircleAvatar(
-                                  radius: 20,
-                                  child: Center(
-                                    child: CachedNetworkImage(
-                                      imageUrl:gUser.profilePhotoUrl.toString(),
-                                      imageBuilder: (context, imageProvider) => Container(
-                                        decoration: BoxDecoration(
-                                          //borderRadius: BorderRadius.circular(50),
-                                          shape: BoxShape.circle,
-                                          image: DecorationImage(
-                                            image: imageProvider,
-                                            fit: BoxFit.fill,
-                                          ),
-                                        ),
+                                CachedNetworkImage(
+                                  imageUrl:gUser.profilePhotoUrl.toString(),
+                                  imageBuilder: (context, imageProvider) => Container(
+                                    height: 45,
+                                    width: 45,
+                                    decoration: BoxDecoration(
+                                      //borderRadius: BorderRadius.circular(50),
+                                      shape: BoxShape.circle,
+                                      image: DecorationImage(
+                                        image: imageProvider,
+                                        fit: BoxFit.fill,
                                       ),
-                                      placeholder: (context, url) => CircularProgressIndicator(),
-                                      errorWidget: (context, url, error) => Icon(Icons.error),
                                     ),
                                   ),
+                                  placeholder: (context, url) => CircularProgressIndicator(),
+                                  errorWidget: (context, url, error) => Icon(Icons.error),
                                 ),
                                 Padding(
                                   padding: const EdgeInsets.only(left:8.0),
@@ -168,11 +190,19 @@ class _RecordsState extends State<Records> {
                         }
 
                     ),
+                    Padding(
+                      padding:EdgeInsets.fromLTRB(8,8,8,15),
+                      child: CustomText6(data['Timestamp'],
+
+                      ),
+                    ),
                     Row(
                       children: [
                         Padding(
-                          padding: const EdgeInsets.all(3.0),
-                          child: Text('Do you approve ?'),
+                          padding:EdgeInsets.fromLTRB(8,8,8,15),
+                          child: CustomText6(data['Timestamp'],
+
+                          ),
                         ),
                         Expanded(child: SizedBox()),
                         GestureDetector(
@@ -184,7 +214,16 @@ class _RecordsState extends State<Records> {
                               handleResponse();
 
                             },
-                            child: Text('Yes')),
+                            child: Container(
+
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  color: Colors.green,
+                                ),
+                                child: FittedBox(child: Padding(
+                                  padding: const EdgeInsets.all(10.0),
+                                  child: CustomText4('Yes',Colors.white),
+                                )))),
                         SizedBox(
                           width: 10,
                         ),
@@ -192,25 +231,18 @@ class _RecordsState extends State<Records> {
                           onTap: (){
 
                           },
-                          child: Padding(
-                            padding: const EdgeInsets.only(right:10.0),
-                            child: Text('No'),
-                          ),
+                          child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                color: Colors.red,
+                              ),
+                              child: FittedBox(child: Padding(
+                                padding: EdgeInsets.all(10.0),
+                                child: CustomText4('No',Colors.white),
+                              )))
                         ),
                       ],
                     ),
-
-
-
-                    /*  Container(
-                        height: 200,
-                        width: 200,
-                        child: FittedBox(
-                          child: buildTimeline(),
-                        ),
-
-                      ),*/
-                    Divider(),
                   ],
                 ),
               );
@@ -267,9 +299,12 @@ class _RecordsState extends State<Records> {
               document.data()! as Map<String,dynamic>;
 
               return Container(
-                height: 150,
+                height: 120,
                 margin: EdgeInsets.all(8),
-                color: Colors.white,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(7),
+                  color: Colors.white,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -277,10 +312,8 @@ class _RecordsState extends State<Records> {
                       children: [
                         Padding(
                           padding: const EdgeInsets.only(top:8.0,left:8),
-                          child: Text('You successfully sent a package to',
-                            style: TextStyle(
-                                color: Colors.black
-                            ),
+                          child:  CustomText7('You successfully sent a package to',
+
                           ),
                         ),
                         Expanded(child: SizedBox()),
@@ -289,24 +322,30 @@ class _RecordsState extends State<Records> {
                               isScrollControlled: true,
                               context: context,
                               builder: (BuildContext context){
-                                return DraggableScrollableSheet(
-                                    expand: false,
-                                    initialChildSize: 0.6,
-                                    minChildSize: 0.4,
-                                    maxChildSize: 0.9,
-                                    builder: (BuildContext context, ScrollController scrollcontroller){
-                                      return PostView(postId: data['PostId'].toString(),Id:data['From'].toString(),);
+                                p_Id=data['PostId'].toString();
+                                getPost();
+                                return FutureBuilder(
+                                    future:getPost(),
+                                    builder: (context, snapshot) {
+                                      return DraggableScrollableSheet(
+                                          expand: false,
+                                          initialChildSize: 0.6,
+                                          minChildSize: 0.4,
+                                          maxChildSize: 0.9,
+                                          builder: (BuildContext context, ScrollController scrollcontroller){
+                                            return ListView(
+                                              children:posts,
+                                            );
+                                          }
+                                      );
                                     }
                                 );
                               }
                           ),
-
                           child: Padding(
-                            padding: const EdgeInsets.only(top:8.0,left:8),
-                            child: Text('View post',
-                              style: TextStyle(
-                                  color: Colors.green
-                              ),
+                            padding:EdgeInsets.only(right:8,top: 8),
+                            child: CustomText4('View post',
+                                Colors.green
                             ),
                           ),
                         ),
@@ -324,7 +363,7 @@ class _RecordsState extends State<Records> {
                           var DocData = snapshot.data as DocumentSnapshot;
                           GUser gUser = GUser.fromDocument(DocData);
                           return Padding(
-                            padding: const EdgeInsets.all(20.0),
+                            padding: const EdgeInsets.fromLTRB(20.0,15,20,5),
                             child:Row(
                               children: [
                                 CircleAvatar(
@@ -364,18 +403,12 @@ class _RecordsState extends State<Records> {
                         }
 
                     ),
+                    Padding(
+                      padding:EdgeInsets.fromLTRB(8,8,8,15),
+                      child: CustomText6(data['Timestamp'],
 
-
-
-                    /*  Container(
-                        height: 200,
-                        width: 200,
-                        child: FittedBox(
-                          child: buildTimeline(),
-                        ),
-
-                      ),*/
-                    Divider(),
+                      ),
+                    ),
                   ],
                 ),
               );
@@ -432,9 +465,12 @@ class _RecordsState extends State<Records> {
               document.data()! as Map<String,dynamic>;
 
               return Container(
-                height: 150,
+                height: 120,
                 margin: EdgeInsets.all(8),
-                color: Colors.white,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(7),
+                  color: Colors.white,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -442,10 +478,7 @@ class _RecordsState extends State<Records> {
                       children: [
                         Padding(
                           padding: const EdgeInsets.only(top:8.0,left:8),
-                          child: Text('You successfully received a package from',
-                            style: TextStyle(
-                                color: Colors.black
-                            ),
+                          child: CustomText7('You successfully received a package from',
                           ),
                         ),
                         Expanded(child: SizedBox()),
@@ -454,24 +487,30 @@ class _RecordsState extends State<Records> {
                               isScrollControlled: true,
                               context: context,
                               builder: (BuildContext context){
-                                return DraggableScrollableSheet(
-                                    expand: false,
-                                    initialChildSize: 0.6,
-                                    minChildSize: 0.4,
-                                    maxChildSize: 0.9,
-                                    builder: (BuildContext context, ScrollController scrollcontroller){
-                                      return PostView(postId: data['PostId'].toString(),Id:data['From'].toString(),);
+                                p_Id=data['PostId'].toString();
+                                getPost();
+                                return FutureBuilder(
+                                    future:getPost(),
+                                    builder: (context, snapshot) {
+                                      return DraggableScrollableSheet(
+                                          expand: false,
+                                          initialChildSize: 0.6,
+                                          minChildSize: 0.4,
+                                          maxChildSize: 0.9,
+                                          builder: (BuildContext context, ScrollController scrollcontroller){
+                                            return ListView(
+                                              children:posts,
+                                            );
+                                          }
+                                      );
                                     }
                                 );
                               }
                           ),
-
                           child: Padding(
-                            padding: const EdgeInsets.only(top:8.0,left:8),
-                            child: Text('View post',
-                              style: TextStyle(
-                                  color: Colors.green
-                              ),
+                            padding:EdgeInsets.only(right:8,top: 8),
+                            child: CustomText4('View post',
+                                Colors.green
                             ),
                           ),
                         ),
@@ -489,36 +528,30 @@ class _RecordsState extends State<Records> {
                           var DocData = snapshot.data as DocumentSnapshot;
                           GUser gUser = GUser.fromDocument(DocData);
                           return Padding(
-                            padding: const EdgeInsets.all(20.0),
+                            padding: const EdgeInsets.fromLTRB(20.0,15,20,5),
                             child:Row(
                               children: [
-                                CircleAvatar(
-                                  radius: 20,
-                                  child: Center(
-                                    child: CachedNetworkImage(
-                                      imageUrl:gUser.profilePhotoUrl.toString(),
-                                      imageBuilder: (context, imageProvider) => Container(
-                                        decoration: BoxDecoration(
-                                          //borderRadius: BorderRadius.circular(50),
-                                          shape: BoxShape.circle,
-                                          image: DecorationImage(
-                                            image: imageProvider,
-                                            fit: BoxFit.fill,
-                                          ),
-                                        ),
+                                CachedNetworkImage(
+                                  imageUrl:gUser.profilePhotoUrl.toString(),
+                                  imageBuilder: (context, imageProvider) => Container(
+                                    height: 45,
+                                    width: 45,
+                                    decoration: BoxDecoration(
+                                      //borderRadius: BorderRadius.circular(50),
+                                      shape: BoxShape.circle,
+                                      image: DecorationImage(
+                                        image: imageProvider,
+                                        fit: BoxFit.fill,
                                       ),
-                                      placeholder: (context, url) => CircularProgressIndicator(),
-                                      errorWidget: (context, url, error) => Icon(Icons.error),
                                     ),
                                   ),
+                                  placeholder: (context, url) => CircularProgressIndicator(),
+                                  errorWidget: (context, url, error) => Icon(Icons.error),
                                 ),
                                 Padding(
                                   padding: const EdgeInsets.only(left:8.0),
-                                  child: Text(gUser.lname.toString()+" "+gUser.fname.toString(),
-                                    style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold
-                                    ),
+                                  child: CustomText2(gUser.lname.toString()+" "+gUser.fname.toString(),
+
                                   ),
                                 ),
                               ],
@@ -529,18 +562,12 @@ class _RecordsState extends State<Records> {
                         }
 
                     ),
+                    Padding(
+                      padding:EdgeInsets.fromLTRB(8,8,8,15),
+                      child: CustomText6(data['Timestamp'],
 
-
-
-                    /*  Container(
-                        height: 200,
-                        width: 200,
-                        child: FittedBox(
-                          child: buildTimeline(),
-                        ),
-
-                      ),*/
-                    Divider(),
+                      ),
+                    ),
                   ],
                 ),
               );
@@ -645,7 +672,9 @@ var p_id;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.green.shade50,
       appBar:AppBar(
+        elevation: 0,
         automaticallyImplyLeading: false,
         centerTitle: true,
         iconTheme: IconThemeData(
@@ -678,15 +707,15 @@ var p_id;
                 onTap: onTap,
                 items: [
                   TitledNavigationBarItem(
-                    icon:Icon(Icons.all_inclusive),
+                    icon:Icon(Icons.downloading_outlined),
                     title:Text('Pending'),
                   ),
                   TitledNavigationBarItem(
-                    icon:Icon(Icons.free_breakfast),
+                    icon:Icon(Icons.send_outlined),
                     title:Text('Shared'),
                   ),
                   TitledNavigationBarItem(
-                    icon:Icon(Icons.monetization_on_sharp),
+                    icon:Icon(Icons.call_received_outlined),
                     title:Text('Received'),
                   ),
                 ],

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expandable/expandable.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
@@ -29,6 +30,7 @@ final postsRef = FirebaseFirestore.instance.collection('posts');
 final timelineRef = FirebaseFirestore.instance.collection('postsTimeline');
 final requestsTimelineRef = FirebaseFirestore.instance.collection('requestsTimeline');
 final requestsRef = FirebaseFirestore.instance.collection('requests');
+
 
 ///Sharing posts
 class ShareForm extends StatefulWidget {
@@ -141,7 +143,8 @@ class _ShareFormState extends State<ShareForm> {
 
   ///Create post details for user in firestore
  createFirestorePostDetails({String? username, String? description, String? mediaUrl,
-   String? pstatus,DateTime? timestamp,String? city,String? ingr_cont,String? shared_as, String? shared}){
+   String? pstatus,DateTime? timestamp,String? city,
+   String? ingr_cont,String? shared_as, String? shared}){
    postsRef
    .doc(currentUser!.uid)
    .collection('userposts')
@@ -155,7 +158,7 @@ class _ShareFormState extends State<ShareForm> {
      'OwnerID':currentUser!.uid,
      'Timestamp':timestamp,
      'Description':description,
-     'Location':city,
+     'City':city,
      'MediaUrl':mediaUrl,
      'Ingredients_Content':ingr_cont,
      'Shared':shared,
@@ -180,7 +183,7 @@ class _ShareFormState extends State<ShareForm> {
      'On Timeline':true,
      'Description':description,
      'MediaUrl':mediaUrl,
-     'Location':city,
+     'City':city,
      'Ingredients_Content':ingr_cont,
      'Shared':shared,
      'Shared as':shared_as,
@@ -200,7 +203,7 @@ class _ShareFormState extends State<ShareForm> {
     if (_formkey.currentState!.validate()){
          await compressImage();
          String mediaUrl=await uploadImage(file);
-         createFirestorePostDetails(
+         await createFirestorePostDetails(
            username: _username,
            pstatus: _status,
            timestamp:timestamp,
@@ -211,7 +214,7 @@ class _ShareFormState extends State<ShareForm> {
            shared: result1,
            shared_as: result,
          );
-         addPostTimeline(
+        await addPostTimeline(
            username: _username,
            pstatus: _status,
            timestamp:timestamp,
@@ -239,7 +242,7 @@ class _ShareFormState extends State<ShareForm> {
  }
 
 
-  void dropdownCallback2(selectedValue){
+ void dropdownCallback2(selectedValue){
     setState((){
       city= selectedValue;
     });
@@ -378,6 +381,7 @@ bool value4 =false;
                         //print(widget.profileId);
                         var DocData = snapshot.data as DocumentSnapshot;
                         GUser gUser = GUser.fromDocument(DocData);
+                        _username=gUser.lname.toString()+" "+gUser.fname.toString();
                         return Container(
                           margin: EdgeInsets.all(8.0),
                           decoration: BoxDecoration(
@@ -391,7 +395,7 @@ bool value4 =false;
                               initialValue:gUser.lname.toString()+" "+gUser.fname.toString(),
                               validator: (val)=>val!.isEmpty?'Enter your Name':null,
                               onChanged: (val){
-                                setState(() => _username=val);
+                                setState(() => _username=gUser.lname.toString()+" "+gUser.fname.toString());
                               },
                               decoration: InputDecoration(
                                   border:InputBorder.none
@@ -485,7 +489,6 @@ bool value4 =false;
                         decoration:  InputDecoration(
                          labelText: 'Description',border: InputBorder.none
                         ),
-
                       ),
                     ),
                   ),
@@ -525,9 +528,7 @@ bool value4 =false;
         ),
       ):
       SingleChildScrollView(
-
         child:Column(
-
           children: [
              Padding(
               padding: EdgeInsets.only(top:20.0,bottom: 10),
@@ -535,80 +536,140 @@ bool value4 =false;
               null
               ),
             ),
-            ///Organization AND Individual containers
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                ///1st checkbox
-                Stack(
-                  children:[ 
-                    Container(
-                      decoration: BoxDecoration(
-                          color: Colors.orange,
-                        borderRadius: BorderRadius.circular(20)
+            StreamBuilder(
+                stream: usersRef.doc(currentUser!.uid).snapshots(),
+                //Resolve Value Available In Our Builder Function
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return Padding(
+                      padding: const EdgeInsets.only(left: 8.0,right: 8),
+                      child: Container(
+                        height: 50,
+                        color: Colors.green.shade50.withOpacity(0.3),
                       ),
-                    margin:  EdgeInsets.only(top:7),
-                    height: size.height/4,
-                    width: size.width/2.2,
-                    child: Center(
-                      child: Text('Organization'),
+                    );
+                  }
+                  //Deserialize
+                  //print(widget.profileId);
+                  var DocData = snapshot.data as DocumentSnapshot;
+                  GUser gUser = GUser.fromDocument(DocData);
+                  return gUser.identify_as.toString()=="Organization"?
+                  ///1st checkbox
+                  Container(
+                    alignment: Alignment.center,
+
+                    child: Stack(
+                        children:[
+                          Container(
+                            decoration: BoxDecoration(
+                                color: Colors.orange,
+                                borderRadius: BorderRadius.circular(20)
+                            ),
+                            margin:  EdgeInsets.only(top:7),
+                            height: size.height/4,
+                            width: size.width/2.2,
+                            child: Center(
+                              child: Text('Organization'),
+                            ),
+                          ),
+                          Padding(
+                            padding:  EdgeInsets.only(left:1.0,top:7),
+                            child: Checkbox(
+                                value:value1,
+                                onChanged: (newVal) {
+                                  setState(() {
+                                    value1 = !value1;
+                                    value2=false;
+                                    if(value1==true){
+                                      setState((){
+                                        result="Organization";
+                                      });
+                                    }
+                                  });
+                                }),
+                          )
+                        ]
                     ),
-                  ),
-                    Padding(
-                      padding:  EdgeInsets.only(left:1.0,top:7),
-                      child: Checkbox(
-                      value:value1,
-                      onChanged: (newVal) {
-                        setState(() {
-                          value1 = !value1;
-                          value2=false;
-                          if(value1==true){
-                            setState((){
-                              result="Organization";
-                            });
-                          }
-                        });
-                      }),
-                    )
-                  ]
-                ),
-                ///2nd checkbox
-                Stack(
-                  children:[
-                    Container(
-                    margin:  EdgeInsets.only(top:7),
-                    height: size.height/4,
-                    width: size.width/2.2,
-                      decoration: BoxDecoration(
-                          color: Colors.blue,
-                          borderRadius: BorderRadius.circular(20),
-
+                  ):
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      ///1st checkbox
+                      Stack(
+                          children:[
+                            Container(
+                              decoration: BoxDecoration(
+                                  color: Colors.orange,
+                                  borderRadius: BorderRadius.circular(20)
+                              ),
+                              margin:  EdgeInsets.only(top:7),
+                              height: size.height/4,
+                              width: size.width/2.2,
+                              child: Center(
+                                child: Text('Organization'),
+                              ),
+                            ),
+                            Padding(
+                              padding:  EdgeInsets.only(left:1.0,top:7),
+                              child: Checkbox(
+                                  value:value1,
+                                  onChanged: (newVal) {
+                                    setState(() {
+                                      value1 = !value1;
+                                      value2=false;
+                                      if(value1==true){
+                                        setState((){
+                                          result="Organization";
+                                        });
+                                      }
+                                    });
+                                  }),
+                            )
+                          ]
                       ),
-                      child: Center(
-                        child: Text('Individual'),
-                      ),
-                  ),
-                    Padding(
-                      padding:  EdgeInsets.only(left:1.0,top:7),
-                      child: Checkbox(
-                      value:value2,
-                      onChanged: (newVal) {
-                        setState(() {
-                          value2 = !value2;
-                          value1=false;
-                          if(value2==true){
-                            setState((){
-                              result="Individual";
-                            });
-                          }
-                        });
-                      }),
-                    )
-                  ]
-                ),
+                      ///2nd checkbox
+                      Stack(
+                          children:[
+                            Container(
+                              margin:  EdgeInsets.only(top:7),
+                              height: size.height/4,
+                              width: size.width/2.2,
+                              decoration: BoxDecoration(
+                                color: Colors.blue,
+                                borderRadius: BorderRadius.circular(20),
 
-              ],
+                              ),
+                              child: Center(
+                                child: Text('Individual'),
+                              ),
+                            ),
+                            Padding(
+                              padding:  EdgeInsets.only(left:1.0,top:7),
+                              child: Checkbox(
+                                  value:value2,
+                                  onChanged: (newVal) {
+                                    setState(() {
+                                      value2 = !value2;
+                                      value1=false;
+                                      if(value2==true){
+                                        setState((){
+                                          result="Individual";
+                                        });
+                                      }
+                                    });
+                                  }),
+                            )
+                          ]
+                      ),
+
+                    ],
+                  );
+
+                }
+
             ),
+            ///Organization AND Individual containers
+
 
             ///Validating the checkboxes before proceeding
             if(value1==true || value2==true)
@@ -734,8 +795,6 @@ bool value4 =false;
 
 
 
-
-
 ///Request posting
 class RequestForm extends StatefulWidget {
   bool isOrgInd;
@@ -747,29 +806,16 @@ class RequestForm extends StatefulWidget {
 
 class _RequestFormState extends State<RequestForm> {
 
-  _fetch()async{
-    if (currentUser!.uid!=null)
-      await usersRef
-          .doc(currentUser!.uid)
-          .get()
-          .then((ds){
-        _username=ds.data()!['Last Name']+" "+ds.data()!['First Name'];
-       _userImage=ds.data()!['ProfilePhotoUrl'];
-      }).catchError((e){
-        print(e);
-      });
-  }
-
-
   final _formkey= GlobalKey<FormState>();
   bool isUploading=false;
   String RequestpostId= Uuid().v4();
   final currentUser= auth.currentUser;
-
+  final TextEditingController _textEditingController= TextEditingController();
 
   ///Create post details for user in firestore
   createFirestorePostDetails({String? username, String? description,
-    String? pstatus,String? timestamp,String? location,String? requested,String? requestedId, String? requested_as}){
+    String? pstatus,DateTime? timestamp,DateTime? expire_at,String? city,String? requested,
+    String? currency,String? requestedId, String? requested_as}){
     requestsRef
         .doc(currentUser!.uid)
         .collection('userRequests')
@@ -780,8 +826,10 @@ class _RequestFormState extends State<RequestForm> {
       'Price Status':pstatus,
       'OwnerID':currentUser!.uid,
       'Timestamp':timestamp,
+      'Expire_at':expire_at,
       'Description':description,
-      'Location':location,
+      'Currency':currency,
+      'City':city,
       'Requested':requested,
       'Requested as':requested_as,
     });
@@ -791,7 +839,8 @@ class _RequestFormState extends State<RequestForm> {
 
   ///Add post to timeline
   addPostTimeline({String? username, String? description,
-    String? pstatus,String? timestamp,String? location,String? requested,String? requestedId, String? requested_as}){
+    String? pstatus,DateTime? timestamp,DateTime? expire_at,String? city,String? currency,String? requested,
+    String? requestedId, String? requested_as}){
     requestsTimelineRef
         .doc(RequestpostId)
         .set({
@@ -800,8 +849,10 @@ class _RequestFormState extends State<RequestForm> {
       'Price Status':pstatus,
       'OwnerID':currentUser!.uid,
       'Timestamp':timestamp,
+      'Expire_at':expire_at,
       'Description':description,
-      'Location':location,
+      'City':city,
+      'Currency':currency,
       'Requested':requested,
       'Requested as':requested_as,
     });
@@ -823,27 +874,30 @@ class _RequestFormState extends State<RequestForm> {
     if (_formkey.currentState!.validate()){
       createFirestorePostDetails(
         username: _username,
-        pstatus: _status,
-        timestamp:timestamp.toString(),
-        location:_location,
+        pstatus: price.toString()=="Free"?null:_status,
+        timestamp:timestamp,
+        expire_at:timestamp.add(Duration(days:1)),
+       city:city,
         description:_description,
         requested: result1,
         requested_as: result,
+        currency: currency,
       );
       addPostTimeline(
         username: _username,
-        pstatus: _status,
-        timestamp:timestamp.toString(),
-        location:_location,
+        pstatus:  price.toString()=="Free"?null:_status,
+        timestamp:timestamp,
+        expire_at:timestamp.add(Duration(days:1)),
+        city:city,
         description:_description,
         requested: result1,
         requested_as: result,
+        currency: currency,
       );
     }else{
       isUploading=false;
     }
     Navigator.pop(context);
-
   }
 
 
@@ -856,21 +910,41 @@ class _RequestFormState extends State<RequestForm> {
   bool value2 =false;
   bool value3 =false;
   bool value4 =false;
-
-
+  var res_C="Select city closest to your residence";
+  void dropdownCallback(selectedValue){
+    setState((){
+      city= selectedValue;
+    });
+  }
+  void dropdownCallback2(selectedValue){
+    setState((){
+      price= selectedValue;
+    /*  price.toString()=="Free"?_textEditingController.clear():null;
+      price.toString()=="Free"?_status='':print(_status.toString());*/
+    });
+  }
+  void dropdownCallback3(selectedValue){
+    setState((){
+      currency= selectedValue;
+      /*price.toString()=="Free"?setState(()=> currency=null):print(currency.toString());*/
+    });
+  }
 
 
   String? _username;
-  String? _userImage;
-  late String _location;
-  late String _description;
-  late String _status;
+  String? _location;
+  String? _description;
+  String? _status;
+  String? city;
+  String? price;
+  String? currency;
 
   @override
   Widget build(BuildContext context) {
     final Size size =MediaQuery.of(context).size;
     print (result);
     print (result1);
+
     return Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
@@ -893,6 +967,7 @@ class _RequestFormState extends State<RequestForm> {
               color: Colors.orange
           )),
           actions: [
+
             ///Post button
             RaisedButton(
               color: Colors.green,
@@ -903,156 +978,264 @@ class _RequestFormState extends State<RequestForm> {
             ),
           ],
         ),
-
         body: IsOrgInd==true?
         SingleChildScrollView(
           child:Column(
             children: [
-
               isUploading? linearProgress(): SizedBox(),
               ///Image upload Container
-              FutureBuilder(
-                  future: _fetch(),
-                  builder: (context,snapshot){
-                    if (snapshot.connectionState!=ConnectionState.done)
-                      return Container(
-                          margin:  EdgeInsets.all(10),
-                          height: size.height/4,
-                          width: size.width,
-                          color:Colors.grey[300],
-                          child: CachedNetworkImage(
-                            fit:BoxFit.fitWidth,
-                            imageUrl:_userImage.toString(),
-                            placeholder: (context, url) => Container(
-                              margin:  EdgeInsets.all(10),
-                              height: size.height/4,
-                              width: size.width,
-                              color:Colors.grey[300],
-                              child: Center(
-                                child: Icon(Icons.image),
-                              ),
-                            ),
-                            errorWidget: (context, url, error) => Icon(Icons.image_not_supported),
-
-                          )
-                      );
-                    return Container(
-                        margin:  EdgeInsets.all(10),
-                        height: size.height/4,
-                        width: size.width,
-                        color:Colors.grey[300],
-                        child: CachedNetworkImage(
-                          fit:BoxFit.fitWidth,
-                          imageUrl:_userImage.toString(),
-                          placeholder: (context, url) => Container(
+              StreamBuilder(
+                  stream: usersRef.doc(currentUser!.uid).snapshots(),
+                  //Resolve Value Available In Our Builder Function
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return Center(child: Text('null'));
+                    }
+                    //Deserialize
+                    //print(widget.profileId);
+                    var DocData = snapshot.data as DocumentSnapshot;
+                    GUser gUser = GUser.fromDocument(DocData);
+                    _username=gUser.lname.toString()+" "+gUser.fname.toString();
+                    return Column(
+                      children: [
+                        CachedNetworkImage(
+                          imageUrl:gUser.profilePhotoUrl.toString(),
+                          imageBuilder: (context, imageProvider) => Container(
+                            height: 170,
+                            width: 200,
                             margin:  EdgeInsets.all(10),
-                            height: size.height/4,
-                            width: size.width,
-                            color:Colors.grey[300],
-                            child: Center(
-                              child: Icon(Icons.image),
+                            decoration: BoxDecoration(
+                              border:Border.all(
+                                  width: 1,
+                                  color: Colors.orange
+                              ),
+                              shape: BoxShape.circle,
+                              image: DecorationImage(
+                                  image: imageProvider, fit: BoxFit.cover),
                             ),
                           ),
-                          errorWidget: (context, url, error) => Icon(Icons.image_not_supported),
+                          placeholder: (context, url) => CircularProgressIndicator(),
+                          errorWidget: (context, url, error) => Icon(Icons.error),
+                        ),
+                        Container(
+                          margin: EdgeInsets.all(8.0),
+                          width: 200,
+                          decoration: BoxDecoration(
+                              color: Colors.green.shade100.withOpacity(0.4),
+                              borderRadius: BorderRadius.circular(10)
+                          ),
+                          child: TextFormField(
+                            textAlign: TextAlign.center,
+                            maxLines: null,
+                            keyboardType: TextInputType.multiline,
+                            readOnly: true,
+                            initialValue:gUser.lname.toString()+" "+gUser.fname.toString(),
+                            validator: (val)=>val!.isEmpty?'Enter your Name':null,
+                            onChanged: (val){
+                              setState(() => _username=gUser.lname.toString()+" "+gUser.fname.toString());
+                            },
+                            decoration: InputDecoration(
+                                border:InputBorder.none
+                            ),
 
-                        )
+                          ),
+                        ),
+                        SizedBox(
+                          height: 40,
+                        ),
+                      ],
                     );
+                  }
 
-                  }),
+              ),
 
               ///Form for content upload
               Form(
                 key:_formkey,
                 child: Column(
                   children: [
-                     SizedBox(height: 20.0),
-                    ///FutureBuilder to get Username(Last name+ First name)
-                    FutureBuilder(
-                        future: _fetch(),
-                        builder: (context,snapshot){
-                          if (snapshot.connectionState!=ConnectionState.done)
-                            return CircularProgressIndicator();
-                          return Padding(
-                            padding:  EdgeInsets.all(8.0),
-                            child: TextFormField(
-                              readOnly: true,
-                              initialValue:_username,
-                              validator: (val)=>val!.isEmpty?'Enter your Name':null,
-                              onChanged: (val){
-                                setState(() => _username=val);
-                              },
-                              decoration: InputDecoration(
-                                fillColor: Colors.blue,
-                                hintText: 'Enter your Name ',labelText: 'Username',border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-
-                              ),
-                              ),
-
-                            ),
-                          );
-
-                        }),
-
-                     SizedBox(height: 20.0),
-                    ///Enter location textfield
-                    Container(
-                      color: Colors.grey.shade100,
-                      // margin: EdgeInsets.only(left: 18,right:18),
-                      child: Padding(
-                        padding:  EdgeInsets.all(8.0),
-                        child: TextFormField(
-                          validator: (val)=>val!.isEmpty?'Enter your Location':null,
-                          onChanged: (val){
-                            setState(() => _location=val);
-                          },
-                          decoration:  InputDecoration(
-                            hintText: 'Enter your Location',labelText: 'Location',border:UnderlineInputBorder(
-
-                          ),
-                          ),
-
-                        ),
-                      ),
-                    ),
-                     SizedBox(height: 20.0),
-                    ///status textfield
-                    Container(
-                      color: Colors.grey.shade100,
-                      child: Padding(
-                        padding:  EdgeInsets.all(8.0),
-                        child: TextFormField(
-                          validator: (val)=>val!.isEmpty?'Enter your Value':null,
-                          onChanged: (val){
-                            setState(() => _status=val);
-                          },
-                          decoration:  InputDecoration(
-                            hintText: 'Enter your Value',labelText: 'Status',border: UnderlineInputBorder(
-                          ),
-                          ),
-
-                        ),
-                      ),
-                    ),
-                     SizedBox(height: 20.0),
                     ///description textfield
                     Container(
-                      color: Colors.grey.shade100,
+                      margin: EdgeInsets.all(8.0),
+                      decoration: BoxDecoration(
+                          color: Colors.green.shade100.withOpacity(0.4),
+                          borderRadius: BorderRadius.circular(10)
+                      ),
                       child: Padding(
-                        padding:  EdgeInsets.all(8.0),
+                        padding: EdgeInsets.only(left:12.0),
                         child: TextFormField(
-                          validator: (val)=>val!.isEmpty?'Description':null,
+                          validator: (val)=>val!.isEmpty?'Enter your Value':null,
                           onChanged: (val){
                             setState(() => _description=val);
                           },
                           decoration:  InputDecoration(
-                            hintText: 'Enter description',labelText: 'Description',border: UnderlineInputBorder(
-                          ),
+                              labelText: 'Description',border: InputBorder.none
                           ),
 
                         ),
                       ),
                     ),
+                    ///status textfield
+                    Row(
+                      children: [
+                        ///city
+                        Container(
+                          width: size.width/4,
+                          height: 50,
+                          margin: EdgeInsets.all(8.0),
+                          decoration: BoxDecoration(
+                              color: Colors.green.shade100.withOpacity(0.4),
+                              borderRadius: BorderRadius.circular(10)
+                          ),
+                          child: Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(8.0),
+                              child: DropdownButton(
+                                hint: Padding(
+                                  padding:  EdgeInsets.all(4.0),
+                                  child: FittedBox(child: Text("  Status")),
+                                ),
+                                isExpanded: true,
+                                isDense: true,
+                                alignment: AlignmentDirectional.centerEnd,
+                                dropdownColor: Colors.white,
+                                elevation: 1,
+                                // itemHeight:48,
+                                underline: SizedBox(),
+                                value:price,
+                                focusColor: Colors.white,
+                                style: TextStyle(
+                                    fontSize: 20,
+                                    color: Colors.orange
+                                ),
+                                items:[
+                                  DropdownMenuItem(
+                                    child:Text('Priced'),value: "Priced",
+                                  ),
+                                  DropdownMenuItem(
+                                    child:Text('Free'),value: "Free",
+                                  ),
+                                ],
+                                onChanged:dropdownCallback2,
+                              ),
+                            ),
+                          ),
+                        ),
+                        price.toString()=="Free"?
+                          SizedBox():
+                        Container(
+                          width:size.width/4,
+                          height: 50,
+                          margin: EdgeInsets.all(8.0),
+                          decoration: BoxDecoration(
+                              color: Colors.green.shade100.withOpacity(0.4),
+                              borderRadius: BorderRadius.circular(10)
+                          ),
+                          child: Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(8.0),
+                              child: DropdownButton(
+                                hint: Padding(
+                                  padding:  EdgeInsets.all(4.0),
+                                  child: FittedBox(child: Text("  Currency")),
+                                ),
+                                isExpanded: true,
+                                isDense: true,
+                                alignment: AlignmentDirectional.centerEnd,
+                                dropdownColor: Colors.white,
+                                elevation: 1,
+                                // itemHeight:48,
+                                underline: SizedBox(),
+                                value:currency,
+                                focusColor: Colors.white,
+                                style: TextStyle(
+                                    fontSize: 20,
+                                    color: Colors.orange
+                                ),
+                                items:[
+                                  DropdownMenuItem(
+                                    child:Text('GH₵'),value: "GH₵",
+                                  ),
+                                  DropdownMenuItem(
+                                    child:Text("\$"),value: "\$",
+                                  ),
+                                ],
+                                onChanged:dropdownCallback3,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        price.toString()=="Free"?
+                        SizedBox():
+                        Container(
+                          width: size.width/4,
+                          height: 50,
+                          //margin: EdgeInsets.all(8.0),
+                          decoration: BoxDecoration(
+                              color: Colors.green.shade100.withOpacity(0.4),
+                              borderRadius: BorderRadius.circular(10)
+                          ),
+                          child: TextFormField(
+                            keyboardType: TextInputType.number,
+                            //controller:_textEditingController,
+                            inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter. digitsOnly],
+                            validator: (val)=>val!.isEmpty?'Enter your Value':null,
+                            onChanged: (val){
+                             setState(()=>_status=val);
+                             print(val);
+                            },
+                            decoration:  InputDecoration(
+                                border: InputBorder.none
+                            ),
+
+                          ),
+                        ),
+                      ],
+                    ),
+                    ///city
+                    Container(
+                      height:size.height/17,
+                      margin: EdgeInsets.all(8.0),
+                      decoration: BoxDecoration(
+                          color: Colors.green.shade100.withOpacity(0.4),
+                          borderRadius: BorderRadius.circular(10)
+                      ),
+                      child: Center(
+                        child: DropdownButton(
+                          hint: Padding(
+                            padding:  EdgeInsets.all(4.0),
+                            child: FittedBox(child: Text("  "+res_C)),
+                          ),
+                          isExpanded: true,
+                          isDense: true,
+                          alignment: AlignmentDirectional.centerEnd,
+                          dropdownColor: Colors.white,
+                          elevation: 1,
+                          // itemHeight:48,
+                          underline: SizedBox(),
+                          value:city,
+                          focusColor: Colors.white,
+                          style: TextStyle(
+                              fontSize: 20,
+                              color: Colors.orange
+                          ),
+                          items:[
+                            DropdownMenuItem(
+                              child:Text('Accra'),value: "Accra",
+                            ),
+                            DropdownMenuItem(
+                              child:Text('Central'),value: "Central",
+                            ),
+                            DropdownMenuItem(
+                              child:Text('Kumasi'),value: "Kumasi",
+                            ),
+                          ],
+                          onChanged:dropdownCallback,
+                        ),
+                      ),
+                    ),
+
                      SizedBox(height: 20.0),
                     //Dropdown
                      SizedBox(height: 20.0),
@@ -1065,386 +1248,258 @@ class _RequestFormState extends State<RequestForm> {
           ),
         ):
         SingleChildScrollView(
-
           child:Column(
 
             children: [
-              ///Organization AND Individual containers
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  ///1st checkbox
-                  Stack(
-                      children:[
-                        Container(
-                          margin:  EdgeInsets.only(top:7),
-                          height: size.height/4,
-                          width: size.width/2.2,
-                          color: Colors.orange,
+              Padding(
+                padding: EdgeInsets.only(top:20.0,bottom: 10),
+                child: CustomText('What do you identify as?',
+                    null
+                ),
+              ),
+              StreamBuilder(
+                  stream: usersRef.doc(currentUser!.uid).snapshots(),
+                  //Resolve Value Available In Our Builder Function
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return Padding(
+                        padding: const EdgeInsets.only(left: 8.0,right: 8),
+                        child: Container(
+                          height: 50,
+                          color: Colors.green.shade50.withOpacity(0.3),
                         ),
-                        Checkbox(
-                            value:value1,
-                            onChanged: (newVal) {
-                              setState(() {
-                                value1 = !value1;
-                                value2=false;
-                                if(value1==true){
-                                  setState((){
-                                    result="Organization";
-                                  });
-                                }
-                              });
-                            })
-                      ]
-                  ),
-                  ///2nd checkbox
-                  Stack(
-                      children:[
-                        Container(
-                          margin:  EdgeInsets.only(top:7),
-                          height: size.height/4,
-                          width: size.width/2.2,
-                          color: Colors.blue,
-                        ),
-                        Checkbox(
-                            value:value2,
-                            onChanged: (newVal) {
-                              setState(() {
-                                value2 = !value2;
-                                value1=false;
-                                if(value2==true){
-                                  setState((){
-                                    result="Individual";
-                                  });
-                                }
-                              });
-                            })
-                      ]
-                  ),
+                      );
+                    }
+                    //Deserialize
+                    //print(widget.profileId);
+                    var DocData = snapshot.data as DocumentSnapshot;
+                    GUser gUser = GUser.fromDocument(DocData);
+                    return gUser.identify_as.toString()=="Organization"?
+                    ///1st checkbox
+                    Container(
+                      alignment: Alignment.center,
 
-                ],
+                      child: Stack(
+                          children:[
+                            Container(
+                              decoration: BoxDecoration(
+                                  color: Colors.orange,
+                                  borderRadius: BorderRadius.circular(20)
+                              ),
+                              margin:  EdgeInsets.only(top:7),
+                              height: size.height/4,
+                              width: size.width/2.2,
+                              child: Center(
+                                child: Text('Organization'),
+                              ),
+                            ),
+                            Padding(
+                              padding:  EdgeInsets.only(left:1.0,top:7),
+                              child: Checkbox(
+                                  value:value1,
+                                  onChanged: (newVal) {
+                                    setState(() {
+                                      value1 = !value1;
+                                      value2=false;
+                                      if(value1==true){
+                                        setState((){
+                                          result="Organization";
+                                        });
+                                      }
+                                    });
+                                  }),
+                            )
+                          ]
+                      ),
+                    ):
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        ///1st checkbox
+                        Stack(
+                            children:[
+                              Container(
+                                decoration: BoxDecoration(
+                                    color: Colors.orange,
+                                    borderRadius: BorderRadius.circular(20)
+                                ),
+                                margin:  EdgeInsets.only(top:7),
+                                height: size.height/4,
+                                width: size.width/2.2,
+                                child: Center(
+                                  child: Text('Organization'),
+                                ),
+                              ),
+                              Padding(
+                                padding:  EdgeInsets.only(left:1.0,top:7),
+                                child: Checkbox(
+                                    value:value1,
+                                    onChanged: (newVal) {
+                                      setState(() {
+                                        value1 = !value1;
+                                        value2=false;
+                                        if(value1==true){
+                                          setState((){
+                                            result="Organization";
+                                          });
+                                        }
+                                      });
+                                    }),
+                              )
+                            ]
+                        ),
+                        ///2nd checkbox
+                        Stack(
+                            children:[
+                              Container(
+                                margin:  EdgeInsets.only(top:7),
+                                height: size.height/4,
+                                width: size.width/2.2,
+                                decoration: BoxDecoration(
+                                  color: Colors.blue,
+                                  borderRadius: BorderRadius.circular(20),
+
+                                ),
+                                child: Center(
+                                  child: Text('Individual'),
+                                ),
+                              ),
+                              Padding(
+                                padding:  EdgeInsets.only(left:1.0,top:7),
+                                child: Checkbox(
+                                    value:value2,
+                                    onChanged: (newVal) {
+                                      setState(() {
+                                        value2 = !value2;
+                                        value1=false;
+                                        if(value2==true){
+                                          setState((){
+                                            result="Individual";
+                                          });
+                                        }
+                                      });
+                                    }),
+                              )
+                            ]
+                        ),
+
+                      ],
+                    );
+
+                  }
+
               ),
 
-              ///proceed when checkbox 1 is ticked
-              value1==true?
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  ///3rd checkbox
-                  Stack(
-                      children:[
-                        Container(
-                          margin:  EdgeInsets.only(top:7),
-                          height: size.height/4,
-                          width: size.width/2.2,
-                          color: Colors.orange,
-                        ),
-                        Checkbox(
-                            value:value3,
-                            onChanged: (newVal) {
-                              setState(() {
-                                value3 = !value3;
-                                value4=false;
-                                if(value3==true){
-                                  setState((){
-                                    result1="Food Items";
-                                  });
-                                }
-                              });
-                            })
-                      ]
-                  ),
-                  ///4th checkbox
-                  Stack(
-                      children:[
-                        Container(
-                          margin:  EdgeInsets.only(top:7),
-                          height: size.height/4,
-                          width: size.width/2.2,
-                          color: Colors.blue,
-                        ),
-                        Checkbox(
-                            value:value4,
-                            onChanged: (newVal) {
-                              setState(() {
-                                value4 = !value4;
-                                value3=false;
-                                setState((){
-                                  result1="Meal";
-                                });
-                              });
-                            })
-                      ]
-                  ),
 
-                ],
-              ):
-              SizedBox(),
-
-
-              ///proceed when checkbox 2 is ticked
-              value2==true?
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  ///3rd checkbox
-                  Stack(
-                      children:[
-                        Container(
-                          margin:  EdgeInsets.only(top:7),
-                          height: size.height/4,
-                          width: size.width/2.2,
-                          color: Colors.orange,
+              ///Validating the checkboxes before proceeding
+              if(value1==true || value2==true)
+                Column(
+                  children: [
+                    Padding(
+                      padding:  EdgeInsets.only(top:30.0,bottom: 10),
+                      child: CustomText('What do you wish to share?',null),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        ///3rd checkbox
+                        Stack(
+                            children:[
+                              Container(
+                                margin:  EdgeInsets.only(top:7),
+                                height: size.height/4,
+                                width: size.width/2.2,
+                                decoration: BoxDecoration(
+                                    color: Colors.orange,
+                                    borderRadius: BorderRadius.circular(20)
+                                ),
+                                child: Center(
+                                  child: Text('Food Items'),
+                                ),
+                              ),
+                              Padding(
+                                padding:  EdgeInsets.only(left:1.0,top:7),
+                                child: Checkbox(
+                                    value:value3,
+                                    onChanged: (newVal) {
+                                      setState(() {
+                                        value3 = !value3;
+                                        value4=false;
+                                        if(value3==true){
+                                          setState((){
+                                            result1="Food Items";
+                                          });
+                                        }
+                                      });
+                                    }),
+                              ),
+                            ]
                         ),
-                        Checkbox(
-                            value:value3,
-                            onChanged: (newVal) {
-                              setState(() {
-                                value3 = !value3;
-                                value4=false;
-                                setState((){
-                                  result1="Food Items";
-                                });
-                              });
-                            })
-                      ]
-                  ),
-                  ///4t checkbox
-                  Stack(
-                      children:[
-                        Container(
-                          margin:  EdgeInsets.only(top:7),
-                          height: size.height/4,
-                          width: size.width/2.2,
-                          color: Colors.blue,
+                        ///4th checkbox
+                        Stack(
+                            children:[
+                              Container(
+                                margin:  EdgeInsets.only(top:7),
+                                height: size.height/4,
+                                width: size.width/2.2,
+                                decoration: BoxDecoration(
+                                    color: Colors.blue,
+                                    borderRadius: BorderRadius.circular(20)
+                                ),
+                                child: Center(
+                                  child: Text('Meal'),
+                                ),
+                              ),
+                              Padding(
+                                padding:  EdgeInsets.only(left:1.0,top:7),
+                                child: Checkbox(
+                                    value:value4,
+                                    onChanged: (newVal) {
+                                      setState(() {
+                                        value4 = !value4;
+                                        value3=false;
+                                        setState((){
+                                          result1="Meal";
+                                        });
+                                      });
+                                    }),
+                              )
+                            ]
                         ),
-                        Checkbox(
-                            value:value4,
-                            onChanged: (newVal) {
-                              setState(() {
-                                value4 = !value4;
-                                value3=false;
-                                if(value4==true){
-                                  setState((){
-                                    result1="Meal";
-                                  });
-                                }
-                              });
-                            })
-                      ]
-                  ),
-                ],
-              ):
+
+                      ],
+                    ),
+                  ],
+                ),
               SizedBox(),
 
               ///when all required fields are filled, display next icon
-              value1==true?
-              GestureDetector(
-                onTap: ()async{
-                  if(value3==false){
-                    if(value4==false){
-                      setState((){
-                        error="Tick at least one";
-                      });
-                    }else{
-                      setState(()=> IsOrgInd=true);
-                    }
-                  }else{
+              if((value3==true || value4==true)&& (value1==true || value2==true) )
+                GestureDetector(
+                  onTap: ()async{
                     setState(()=> IsOrgInd=true);
-                  }
-
-                },
-                child: Container(
-                  margin: EdgeInsets.all(40),
-                  height: 40,
-                  width: 70,
-                  decoration: BoxDecoration(
-                      color: Colors.green,
-                      borderRadius: BorderRadius.circular(20)
+                  },
+                  child: Container(
+                    margin: EdgeInsets.all(40),
+                    height: 40,
+                    width: 70,
+                    decoration: BoxDecoration(
+                        color: Colors.green,
+                        borderRadius: BorderRadius.circular(20)
+                    ),
+                    child: Icon(Icons.navigate_next,color: Colors.white,),
                   ),
-                  child: Icon(Icons.navigate_next,color: Colors.white,),
                 ),
-              ):SizedBox(),
-              value2==true?
-              GestureDetector(
-                onTap: ()async {
-                  if(value3==false){
-                    if(value4==false){
-                      setState((){
-                        error="Tick at least one";
-                      });
-                    }else{
-                      setState(()=> IsOrgInd=true);
-                    }
-                  }else{
-                    setState(()=> IsOrgInd=true);
-                  }
-                },
-                child: Container(
-                  margin: EdgeInsets.all(40),
-                  height: 40,
-                  width: 70,
-                  decoration: BoxDecoration(
-                      color: Colors.green,
-                      borderRadius: BorderRadius.circular(20)
-                  ),
-                  child: Icon(Icons.navigate_next,color: Colors.white,),
+              Container(
+                margin: EdgeInsets.all(40),
+                height: 40,
+                width: 70,
+                decoration: BoxDecoration(
+                    color: Colors.grey,
+                    borderRadius: BorderRadius.circular(20)
                 ),
-              ):SizedBox(),
-
-              Text(error),
-
-
-              ///Container for uploaded image file
-
-              ///Form for content upload
-              /* Form(
-              key:_formkey,
-              child: Column(
-                children: [
-                  ///Choose image and clear image enables only if user has uploaded a file
-                  Row(
-                    children: [
-                      Padding(
-                        padding:  EdgeInsets.all(8.0),
-                        child: RaisedButton(
-                          color: Colors.green,
-                          onPressed: ()=>selectImage(context),
-                          child:  Text('Choose Image',
-                            style: TextStyle(color: Colors.white),),
-
-                        ),
-                      ),
-                       Expanded(
-                          flex: 2,
-                          child:  SizedBox(
-                          )),
-                      Padding(
-                        padding:  EdgeInsets.all(8.0),
-                        child: file==null?  SizedBox():FlatButton(
-                          color: Colors.transparent,
-                          onPressed: ()=>clearImage(),
-                          child:  Text('Clear Image',
-                            style:  TextStyle(color: Colors.red),),
-
-                        ),
-                      ),
-                    ],
-                  ),
-
-                   SizedBox(height: 20.0),
-                  ///FutureBuilder to get Username(Last name+ First name)
-                  FutureBuilder(
-                      future: _fetch(),
-                      builder: (context,snapshot){
-                        if (snapshot.connectionState!=ConnectionState.done)
-                          return  CircularProgressIndicator();
-                        return Padding(
-                          padding:  EdgeInsets.all(8.0),
-                          child: TextFormField(
-                            readOnly: false,
-                            initialValue:_username,
-                            validator: (val)=>val!.isEmpty?'Enter your Name':null,
-                            onChanged: (val){
-                              setState(() => _username=val);
-                            },
-                            decoration: InputDecoration(
-                              fillColor: Colors.blue,
-                              hintText: 'Enter your Name ',labelText: 'Username',border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-
-                            ),
-                            ),
-
-                          ),
-                        );
-
-                      }),
-
-                   SizedBox(height: 20.0),
-                  ///Enter location textfield
-                  Container(
-                    color: Colors.grey.shade100,
-                    // margin: EdgeInsets.only(left: 18,right:18),
-                    child: Padding(
-                      padding:  EdgeInsets.all(8.0),
-                      child: TextFormField(
-                        validator: (val)=>val!.isEmpty?'Enter your Location':null,
-                        onChanged: (val){
-                          setState(() => _location=val);
-                        },
-                        decoration:  InputDecoration(
-                          hintText: 'Enter your Location',labelText: 'Location',border:UnderlineInputBorder(
-
-                        ),
-                        ),
-
-                      ),
-                    ),
-                  ),
-                   SizedBox(height: 20.0),
-                  ///status textfield
-                  Container(
-                    color: Colors.grey.shade100,
-                    child: Padding(
-                      padding:  EdgeInsets.all(8.0),
-                      child: TextFormField(
-                        validator: (val)=>val!.isEmpty?'Enter your Value':null,
-                        onChanged: (val){
-                          setState(() => _status=val);
-                        },
-                        decoration:  InputDecoration(
-                          hintText: 'Enter your Value',labelText: 'Status',border: UnderlineInputBorder(
-                        ),
-                        ),
-
-                      ),
-                    ),
-                  ),
-                   SizedBox(height: 20.0),
-                  ///description textfield
-                  Container(
-                    color: Colors.grey.shade100,
-                    child: Padding(
-                      padding:  EdgeInsets.all(8.0),
-                      child: TextFormField(
-                        validator: (val)=>val!.isEmpty?'Description':null,
-                        onChanged: (val){
-                          setState(() => _description=val);
-                        },
-                        decoration:  InputDecoration(
-                          hintText: 'Enter description',labelText: 'Description',border: UnderlineInputBorder(
-                        ),
-                        ),
-
-                      ),
-                    ),
-                  ),
-                   SizedBox(height: 20.0),
-                  ///ingredients textfield
-                  Container(
-                    color: Colors.grey.shade100,
-                    child: Padding(
-                      padding:  EdgeInsets.all(8.0),
-                      child: TextFormField(
-                        validator: (val)=>val!.isEmpty?'Ingredients/content':null,
-                        onChanged: (val){
-                          setState(() => _ingredients=val);
-                        },
-                        decoration:  InputDecoration(
-                          hintText: 'Ingredients/content',labelText: 'Ingredients/content',border: UnderlineInputBorder(
-                        ),
-                        ),
-
-                      ),
-                    ),
-                  ),
-                  //Dropdown
-                   SizedBox(height: 20.0),
-
-                ],
+                child: Icon(Icons.navigate_next,color: Colors.white,),
               ),
-            )*/
 
             ],
           ),

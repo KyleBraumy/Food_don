@@ -6,19 +6,22 @@ import 'package:flutter/material.dart';
 import 'package:sates/secondary_pages/chat_detail.dart';
 import '../authentication/createpage.dart';
 import 'package:flutter_image_slideshow/flutter_image_slideshow.dart';
+import 'package:timeago/timeago.dart' as timeago;
+import '../widgets/constant_widgets.dart';
 
 
 
 
-final CU_id=FirebaseFirestore.instance.collection('users').where('Id',isEqualTo: auth.currentUser!.uid).get(
-);
+
 class viewpost extends StatefulWidget {
   final String? postUsername;
   final String? postStatus;
   final String? postMediaUrl;
   final String? postDescription;
   final String? postOwnerID;
-
+  final String? ingredients;
+  final String? location;
+  var time;
 
   viewpost({
     this.postUsername,
@@ -26,6 +29,9 @@ class viewpost extends StatefulWidget {
     this.postMediaUrl,
     this.postDescription,
     this.postOwnerID,
+    this.ingredients,
+    this.location,
+    this.time,
   });
 
   @override
@@ -35,6 +41,9 @@ class viewpost extends StatefulWidget {
     postMediaUrl: this.postMediaUrl,
     postDescription: this.postDescription,
     postOwnerID: this.postOwnerID,
+    ingredients:this.ingredients,
+    location:this.location,
+    time:this.time,
   );
 }
 
@@ -45,13 +54,19 @@ class _viewpostState extends State<viewpost> {
   final String? postMediaUrl;
   final String? postOwnerID;
   final String? postDescription;
-  final CU_id=FirebaseFirestore.instance.collection('users').where('Id',isEqualTo: auth.currentUser!.uid).get();
+  final String? ingredients;
+  final String? location;
+  var time;
+
   _viewpostState({
     this.postUsername,
     this.postStatus,
     this.postMediaUrl,
     this.postDescription,
     this.postOwnerID,
+    this.ingredients,
+    this.location,
+    this.time,
 });
 
   @override
@@ -84,39 +99,40 @@ var imUrl;
    return
     Scaffold(
       appBar: AppBar(
+        elevation: 0,
         centerTitle: true,
         iconTheme: IconThemeData(
           color: Colors.orange
         ),
         title:Column(
+
           children: [
-            CircleAvatar(
-              radius: 17,
-              child: Center(
-                child: CachedNetworkImage(
-                  imageUrl:imUrl.toString(),
-                  imageBuilder: (context, imageProvider) => Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(50),
-                      image: DecorationImage(
-                        image: imageProvider,
-                        fit: BoxFit.fill,
-                      ),
-                    ),
+
+            CachedNetworkImage(
+              imageUrl:imUrl.toString(),
+              imageBuilder: (context, imageProvider) => Container(
+                margin: EdgeInsets.only(bottom: 5),
+                height: 35,
+                decoration: BoxDecoration(
+                  shape:BoxShape.circle,
+                  image: DecorationImage(
+                    image: imageProvider,
+                    fit: BoxFit.fill,
                   ),
-                  placeholder: (context, url) => CircularProgressIndicator(),
-                  errorWidget: (context, url, error) => Icon(Icons.error),
                 ),
               ),
+              placeholder: (context, url) => CircularProgressIndicator(),
+              errorWidget: (context, url, error) => Icon(Icons.error),
             ),
-            Text(postUsername.toString(),
-              style: TextStyle(color: Colors.orange,
-              fontSize: 20,
-              ),
-              textAlign: TextAlign.center,),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 7.0),
+              child: CustomText3(postUsername.toString()),
+            ),
+
+
           ],
         ),
-            toolbarHeight:70,
+            toolbarHeight:80,
        actions: [
          Padding(
            padding: const EdgeInsets.all(15.0),
@@ -130,11 +146,12 @@ var imUrl;
         child:Column(
           children: <Widget>[
             ImageSlideshow(
-
+              isLoop: true,
+              height: 450,
                 children:[
                   Container(
-                    height: size.height/3,
-                    width: size.width,
+                    //height: size.height/2.7,
+                    //width: size.width,
                     color: Colors.green,
                     child: CachedNetworkImage(
                       imageUrl:postMediaUrl!,
@@ -188,6 +205,7 @@ var imUrl;
                   ),
                 ]
             ),
+
             ///Description
             ExpandablePanel(
                 collapsed: Text(''),
@@ -195,20 +213,16 @@ var imUrl;
                   fit: BoxFit.fill,
                   child: Container(
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(6),
-                      color: Colors.grey.shade300,
+                        color: Colors.green.shade100.withOpacity(0.4),
+                        borderRadius: BorderRadius.circular(10)
                     ),
-                    margin: EdgeInsets.only(bottom: 40,left: 4,right: 4),
+                    margin: EdgeInsets.only(bottom: 20,left: 4,right: 4,top: 4),
                     width: size.width,
 
                     alignment: Alignment.centerLeft,
                     child: Padding(
                       padding: const EdgeInsets.all(10.0),
-                      child: Text(postDescription.toString(),
-                        style: TextStyle(
-                          fontSize:17,
-                        ),
-                        textAlign: TextAlign.left,
+                      child: CustomText4(postDescription.toString(),Colors.black
                       ),
                     ),
                   ),
@@ -219,164 +233,169 @@ var imUrl;
                   fit: BoxFit.fill,
                   child: Container(
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(2),
                       color: Colors.green,
                     ),
-
                     margin: EdgeInsets.only(top: 15,left: 4),
                     child: Padding(
-                      padding: const EdgeInsets.all(6.0),
-                      child: Text('Description',
-                        style: TextStyle(
-                            fontSize: 20,
-                            color: Colors.white
-                        ),
-                        textAlign: TextAlign.left,
+                      padding: const EdgeInsets.all(8.0),
+                      child: CustomText4('Description',Colors.white
                       ),
                     ),
                   ),
                 ),
               ],
             ),
-
-
             ),
 
 
             ///Ingredients
-            Row(
-              children: [
-                FittedBox(
-                  fit: BoxFit.fill,
-                  child: Container(
-                    color: Colors.green,
-                    margin: EdgeInsets.only(top: 15,left: 4),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Text('Ingredients/Content',
-                        style: TextStyle(
-                            fontSize: 20,
-                            color: Colors.white
+
+            ExpandablePanel(
+              collapsed: Text(''),
+              expanded: FittedBox(
+                fit: BoxFit.fill,
+                child: Container(
+                  decoration: BoxDecoration(
+                      color: Colors.green.shade100.withOpacity(0.4),
+                      borderRadius: BorderRadius.circular(10)
+                  ),
+                  margin: EdgeInsets.only(bottom: 20,left: 4,right: 4,top: 4),
+                  width: size.width,
+
+                  alignment: Alignment.centerLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.all(10.0),
+                    child: CustomText4(ingredients.toString(),
+                    Colors.black
+                    ),
+                  ),
+                ),
+              ),
+              header:Row(
+                children: [
+                  FittedBox(
+                    fit: BoxFit.fill,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(2),
+                        color: Colors.green,
+                      ),
+                      margin: EdgeInsets.only(top: 15,left: 4),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: CustomText4('Ingredients / Content',
+                            Colors.white
                         ),
-                        textAlign: TextAlign.left,
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
-            FittedBox(
-              fit: BoxFit.fill,
-              child: Container(
-                margin: EdgeInsets.all(4),
-                width: size.width,
-                color: Colors.grey.shade300,
-                alignment: Alignment.centerLeft,
-                child: Padding(
-                  padding: const EdgeInsets.all(10.0),
-                  child: Text(postDescription.toString(),
-                    style: TextStyle(
-                      fontSize:17,
-                    ),
-                    textAlign: TextAlign.left,
-                  ),
-                ),
+                ],
               ),
             ),
             ///Location
-            Row(
-              children: [
-                FittedBox(
-                  fit: BoxFit.fill,
-                  child: Container(
-                    color: Colors.green,
-                    margin: EdgeInsets.only(top: 15,left: 4),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Text('Location',
-                        style: TextStyle(
-                            fontSize: 20,
-                            color: Colors.white
-                        ),
-                        textAlign: TextAlign.left,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
 
-            FittedBox(
-              fit: BoxFit.fill,
-              child: Container(
-                margin: EdgeInsets.all(4),
-                width: size.width,
-                color: Colors.grey.shade300,
-                alignment: Alignment.centerLeft,
-                child: Padding(
-                  padding: const EdgeInsets.all(10.0),
-                  child: Text(postDescription.toString(),
-                    style: TextStyle(
-                      fontSize:17,
+
+            ExpandablePanel(
+              collapsed: Text(''),
+              expanded:FittedBox(
+                fit: BoxFit.fill,
+                child: Container(
+                  margin: EdgeInsets.only(bottom: 20,left: 4,right: 4,top: 4),
+                  width: size.width,
+                  decoration: BoxDecoration(
+                      color: Colors.green.shade100.withOpacity(0.4),
+                      borderRadius: BorderRadius.circular(10)
+                  ),
+                  alignment: Alignment.centerLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.all(10.0),
+                    child: CustomText4(location.toString(),Colors.black
                     ),
-                    textAlign: TextAlign.left,
                   ),
                 ),
               ),
-            ),
+              header: Row(
+                children: [
+                  FittedBox(
+                    fit: BoxFit.fill,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(2),
+                        color: Colors.green,
+                      ),
+                      margin: EdgeInsets.only(top: 15,left: 4),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: CustomText4('Location',
+                            Colors.white
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
 
+            ),
 
             ///Price
-            Row(
-              children: [
-                FittedBox(
-                  fit: BoxFit.fill,
-                  child: Container(
-                    color: Colors.green,
-                    margin: EdgeInsets.only(top: 15,left: 4),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Text('Price',
-                        style: TextStyle(
-                            fontSize: 20,
-                            color: Colors.white
-                        ),
-                        textAlign: TextAlign.left,
-                      ),
-                    ),
+
+            ExpandablePanel(
+              collapsed: Text(''),
+              expanded:FittedBox(
+                fit: BoxFit.fill,
+                child: Container(
+                  margin: EdgeInsets.only(bottom: 20,left: 4,right: 4,top: 4),
+                  width: size.width,
+                  decoration: BoxDecoration(
+                      color: Colors.green.shade100.withOpacity(0.4),
+                      borderRadius: BorderRadius.circular(10)
                   ),
-                ),
-              ],
-            ),
-            FittedBox(
-              fit: BoxFit.fill,
-              child: Container(
-                margin: EdgeInsets.all(4),
-                width: size.width,
-                color: Colors.grey.shade300,
-                alignment: Alignment.centerLeft,
-                child: Padding(
-                  padding: const EdgeInsets.all(10.0),
-                  child: Text(postStatus.toString(),
-                    style: TextStyle(
-                      fontSize:17,
+                  alignment: Alignment.centerLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.all(10.0),
+                    child: CustomText4(postStatus.toString(),
+                     Colors.black
                     ),
-                    textAlign: TextAlign.left,
                   ),
                 ),
               ),
-            ),
+              header: Row(
+                children: [
+                  FittedBox(
+                    fit: BoxFit.fill,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(2),
+                        color: Colors.green,
+                      ),
+                      margin: EdgeInsets.only(top: 15,left: 4),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: CustomText4('Price',
+                            Colors.white
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
 
+            ),
           ],
         )
       ),
 
-      floatingActionButton:postOwnerID==currentUser!.uid ? SizedBox(): FloatingActionButton.extended(
+
+      ///disabling and enabling the message icon depending on post owner
+      floatingActionButton:postOwnerID==currentUser!.uid ?
+      SizedBox(): FloatingActionButton.extended(
         backgroundColor: Colors.orange,
           onPressed:()=>Navigator.push(context, MaterialPageRoute(
-              builder: (context)=> ChatDetail(
+              builder: (context)=> Chatset(
                 friendName: postUsername.toString(),
                 friendUid: postOwnerID,
+               friendurl:imUrl,
                 ))),
           label:Text('$postUsername'),
           icon:Icon(Icons.textsms_outlined),

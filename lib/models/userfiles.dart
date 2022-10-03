@@ -62,6 +62,8 @@ class GUser {
       profilePhotoUrl: snapshot['ProfilePhotoUrl'],
       backprofilePhotoUrl: snapshot['BackProfilePhotoUrl'],
       bio: snapshot['Bio'],
+      address: snapshot['Address'],
+      occupation: snapshot['Occupation'],
       works_at: snapshot['Works_at'],
       identify_as: snapshot['Identify_as'],
       street_name: snapshot['Street name'],
@@ -73,6 +75,33 @@ class GUser {
 
 
 }
+class Usn {
+  final String? fname;
+  final String? identify_as;
+
+
+
+  Usn({
+    this.fname,
+    this.identify_as,
+
+  });
+
+  //From Firestore A DocumentSnapshot. Doc Is A Map.
+  // This Is A From Document Factory
+  factory Usn.fromDocument(DocumentSnapshot snapshot) {
+    return Usn(
+      fname: snapshot['First Name'],
+      identify_as: snapshot['Identify_as'],
+    );
+  }
+
+
+
+
+
+}
+
 class PostPhotos{
   final String? f_postPhoto;
   final String? s_postPhoto;
@@ -119,8 +148,6 @@ class Review {
     );
   }
 }
-
-
 class U_rate {
   String? rating;
   String? rated_By;
@@ -139,6 +166,31 @@ class U_rate {
     return U_rate(
       rating: snapshot['Rating'],
       rated_By: snapshot['Rated_By'],
+    );
+  }
+
+
+
+
+
+}
+class R_template {
+  DateTime? timestamp;
+
+
+
+
+  R_template({
+    this.timestamp,
+
+  });
+
+  //From Firestore A DocumentSnapshot. Doc Is A Map.
+  // This Is A From Document Factory
+  factory R_template.fromDocument(DocumentSnapshot snapshot) {
+    return R_template(
+      timestamp: snapshot['Timestamp'],
+
     );
   }
 

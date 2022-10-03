@@ -25,14 +25,8 @@ class _FirstpageState extends State<Firstpage> {
     return const Scaffold(
         backgroundColor: Colors.green,
         body: Center(
-          child: Text('FOODIE',
-            style: TextStyle(
-              fontSize: 60,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 5,
-              color: Colors.white,
-              decoration:TextDecoration.underline,
-            ),),
+          child: Image(
+              image:AssetImage('assets/images/foodon.png')),
         )
     );
   }

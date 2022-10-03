@@ -72,9 +72,11 @@ class _StartpageState extends State<Startpage> {
                   height: size.height/17,
                   width: size.width/1.3,
                   child: Text(
-                    'Sign in to account',
+                    'Sign in / Create account',
                     style: TextStyle(
                       fontSize: 20,
+                      fontFamily: 'Gotham',
+                      fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
                   ),

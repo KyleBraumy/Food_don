@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:sates/authentication/signin.dart';
 import 'package:sates/startup/startpage.dart';
@@ -5,9 +6,11 @@ import 'package:sates/startup/startpage.dart';
 import 'createpage3.dart';
 
 class createpage2 extends StatefulWidget {
+/*
  String email;
  String password;
  createpage2({required this.email,required this.password});
+*/
 
   @override
   State<createpage2> createState() => _createpage2State();
@@ -15,7 +18,7 @@ class createpage2 extends StatefulWidget {
 
 class _createpage2State extends State<createpage2> {
   final _formKey= GlobalKey<FormState>();
-
+  final currentUserId= FirebaseAuth.instance.currentUser!.uid;
  String empty='You cannot leave this empty';
  String numbersyntax='Enter Without initial zero \n Check to make sure there are 9 digits';
   var fName;
@@ -49,6 +52,7 @@ class _createpage2State extends State<createpage2> {
   @override
   Widget build(BuildContext context) {
     final Size size =MediaQuery.of(context).size;
+    print(currentUserId);
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -220,7 +224,7 @@ class _createpage2State extends State<createpage2> {
                                    validator: (val)=>val!.isEmpty?empty:
                                   (val.length>=10 || val.length<9 ?numbersyntax:null),
                                    onChanged: (val){
-                                     setState(()=> phone1=val
+                                     setState(()=>phone1=val
                                      );
                                    },
                                    decoration: InputDecoration(
@@ -240,10 +244,10 @@ class _createpage2State extends State<createpage2> {
                                child: Padding(
                                  padding: const EdgeInsets.only(left:8.0),
                                  child: TextFormField(
-                                   validator:(val)=>val!.isEmpty?empty:
+                                   validator:(val)=>val!.isEmpty?null:
                                    (val.length>=10 || val.length<9 ?numbersyntax:null),
                                    onChanged: (val){
-                                     setState(()=> phone2=val
+                                     setState(()=>phone2=val
                                      );
                                    },
                                    decoration: InputDecoration(
@@ -447,12 +451,9 @@ class _createpage2State extends State<createpage2> {
       floatingActionButton: FloatingActionButton.extended(
         isExtended: true,
         onPressed: ()async{
-
           if (_formKey.currentState!.validate()){
             Navigator.pushReplacement(context,
                 MaterialPageRoute(builder: (context)=> Createpage3(
-                  email: widget.email,
-                  password: widget.password,
                   fName: fName,
                   lName: lName,
                   address: address,
@@ -470,8 +471,7 @@ class _createpage2State extends State<createpage2> {
             /*  if (result == null){
                                setState(()=>error = 'Please supply a valid email\nor Connect to the internet\nAnd try again.');
                              }else{
-                               Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=> home()));
-                             }
+                            }
 */
           }
         }, label:Text(

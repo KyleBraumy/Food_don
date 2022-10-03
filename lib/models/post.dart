@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:expandable/expandable.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
@@ -16,6 +17,7 @@ import 'package:timeago/timeago.dart' as timeago;
 
 import '../secondary_pages/viewpost.dart';
 import '../secondary_pages/postScreen.dart';
+import '../widgets/constant_widgets.dart';
 
 
 
@@ -98,12 +100,13 @@ class _PostState extends State<Post> {
   String uniqueId=const Uuid().v4();
   final requestsTimelineRef = FirebaseFirestore.instance.collection('requestsTimeline');
   final requestsRef = FirebaseFirestore.instance.collection('requests');
+  final reportsRef=FirebaseFirestore.instance.collection('reports');
   final recordsRef = FirebaseFirestore.instance.collection('records');
   final usersRef = FirebaseFirestore.instance.collection('users');
   final timelineRef = FirebaseFirestore.instance.collection('postsTimeline');
   final postsRef = FirebaseFirestore.instance.collection('posts');
 
-
+  String reportId= Uuid().v4();
 
   final String currentUserId = FirebaseAuth.instance.currentUser!.uid;
   final String? postId;
@@ -190,7 +193,24 @@ var newU;
       });
   }
 
-
+var rport;
+  handleReport()async{
+    await rport;
+    final DateTime timestamp= DateTime.now();
+    await reportsRef.doc(reportId).set({
+      'OwnerID':currentUserId,
+      'Report_Id':reportId,
+      'Timestamp':timestamp,
+      'Handled':false,
+      'Content':rport,
+      'PostOwnerID':ownerId,
+      'Expire_at':timestamp.add(Duration(days:30))
+    });
+    setState((){
+     reportId= Uuid().v4();
+    });
+    Navigator.pop(context);
+  }
 
   ///Create request sent in user documents
   addToUserSent({String? Share,required DateTime timestamp}){
@@ -375,7 +395,7 @@ var new_unique_id;
             ///Details about the post
             Container(
               margin:EdgeInsets.only(top:10,),
-              color: Colors.grey.shade50,
+              color: Colors.white,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -385,41 +405,35 @@ var new_unique_id;
                       ///UserProfilePhoto
                       Padding(
                         padding: const EdgeInsets.all(8.0),
-                        child: CircleAvatar(
-                          radius: 25,
-                          child:
-                          ///StreamBuilder to get profile image upon update
-                          StreamBuilder(
-                              stream: usersRef.doc(widget.ownerId).snapshots(),
-                              //Resolve Value Available In Our Builder Function
-                              builder: (context, snapshot) {
-                                if (!snapshot.hasData) {
-                                  return Center(child: CircularProgressIndicator());
-                                }
-                                //Deserialize
-                                //print(widget.profileId);
-                                var DocData = snapshot.data as DocumentSnapshot;
-                                GUser gUser = GUser.fromDocument(DocData);
-                                return Center(
-                                  child: CachedNetworkImage(
-                                    imageUrl:gUser.profilePhotoUrl.toString(),
-                                    imageBuilder: (context, imageProvider) => Container(
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        //borderRadius: BorderRadius.circular(50),
-                                        image: DecorationImage(
-                                          image: imageProvider,
-                                          fit: BoxFit.fill,
-                                        ),
-                                      ),
-                                    ),
-                                    placeholder: (context, url) => CircularProgressIndicator(),
-                                    errorWidget: (context, url, error) => Icon(Icons.error),
-                                  ),
-                                );
+                        child: StreamBuilder(
+                            stream: usersRef.doc(widget.ownerId).snapshots(),
+                            //Resolve Value Available In Our Builder Function
+                            builder: (context, snapshot) {
+                              if (!snapshot.hasData) {
+                                return Center(child: CircularProgressIndicator());
                               }
 
-                          ),
+                              var DocData = snapshot.data as DocumentSnapshot;
+                              GUser gUser = GUser.fromDocument(DocData);
+                              return CachedNetworkImage(
+                                imageUrl:gUser.profilePhotoUrl.toString(),
+                                imageBuilder: (context, imageProvider) => Container(
+                                  height: 40,
+                                  width: 40,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    //borderRadius: BorderRadius.circular(50),
+                                    image: DecorationImage(
+                                      image: imageProvider,
+                                      fit: BoxFit.fill,
+                                    ),
+                                  ),
+                                ),
+                                placeholder: (context, url) => Icon(Icons.person),
+                                errorWidget: (context, url, error) => Icon(Icons.person_off),
+                              );
+                            }
+
                         ),
                       ),
                       ///Username,Position,Time
@@ -437,13 +451,7 @@ var new_unique_id;
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                                 children: [
-                                  Text(username.toString(),
-                                    style: TextStyle(
-                                        fontSize:17,
-
-                                    ),
-                                    textAlign: TextAlign.left,
-                                    softWrap: true,),
+                                  CustomText2(username.toString()),
                                   Container(
                                     alignment: Alignment.bottomCenter,
                                     margin: EdgeInsets.all(8),
@@ -451,14 +459,10 @@ var new_unique_id;
                                     width: 5,
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
-                                      color: Colors.green,
+                                      color: Colors.grey,
                                     ),
                                   ),
-                                  Text(shared_as.toString(),
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.black.withOpacity(0.5)
-                                  ),
+                                  CustomText5(shared_as.toString(),null
                                   ),
                                 ],
                               ),
@@ -466,14 +470,9 @@ var new_unique_id;
                           ),
                           ///Time post was made
                           FittedBox(
-                            child: Text(
-                              timeago.format(timestamp.toDate()),
-                              overflow:TextOverflow.ellipsis,
-                              style: TextStyle(
-                                  fontSize:12,
-                                  color: Colors.black.withOpacity(0.5)
-                              ),
-                              softWrap: true,),
+                            child: CustomText6(
+                              timestamp,
+                          ),
                           ),
                         ],
                       ),
@@ -509,13 +508,43 @@ var new_unique_id;
                                         builder: (BuildContext context){
                                           return DraggableScrollableSheet(
                                               expand: false,
-                                              initialChildSize: 0.1,
-                                              minChildSize: 0.1,
-                                              maxChildSize: 0.2,
+                                              initialChildSize: 0.3,
+                                              minChildSize: 0.3,
+                                              maxChildSize: 0.3,
                                               builder: (BuildContext context, ScrollController scrollcontroller){
-                                                return ListTile(
-                                                  title:Text('Send acceptance request to : '+"  "+username.toString()),
-                                                  onTap:()=>handleSubmitAcceptanceRequest(),
+                                                return Column(
+                                                  children: [
+                                                    ListTile(
+                                                      title:Text('Send acceptance request to : '+"  "+username.toString()),
+                                                      onTap:()=>handleSubmitAcceptanceRequest(),
+                                                    ),
+                                                    ExpandablePanel(
+                                                        header: ListTile(
+                                                          title:Text('Report User'),
+                                                        ),
+                                                        collapsed:Text(''),
+                                                        expanded:Container(
+                                                          child:Column(
+                                                            children: [
+                                                              ListTile(
+                                                                  title:Text('Inappropriate content'),
+                                                                  onTap: () async{
+                                                                    rport='Inappropriate content';
+                                                                    handleReport();
+                                                                  }
+                                                              ),
+                                                              ListTile(
+                                                                  title:Text('Scam'),
+                                                                  onTap: () async{
+                                                                    rport='Scam';
+                                                                    handleReport();
+                                                                  }
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        )
+                                                    ),
+                                                  ],
                                                 );
                                               }
                                           );
@@ -538,9 +567,9 @@ var new_unique_id;
                                         builder: (BuildContext context){
                                           return DraggableScrollableSheet(
                                               expand: false,
-                                              initialChildSize: 0.1,
-                                              minChildSize: 0.1,
-                                              maxChildSize: 0.2,
+                                              initialChildSize: 0.3,
+                                              minChildSize: 0.3,
+                                              maxChildSize: 0.3,
                                               builder: (BuildContext context, ScrollController scrollcontroller){
                                                 return Column(
                                                     children:snapshot.data!.docs
@@ -549,9 +578,39 @@ var new_unique_id;
                                                       document.data()! as Map<String,dynamic>;
                                                       new_unique_id=data['UniqueId'].toString();
                                                       return
-                                                        ListTile(
-                                                          title:Text('Cancel request to : '+"  "+username.toString()),
-                                                          onTap:()=>handleCancelAcceptanceRequest(),
+                                                        Column(
+                                                          children: [
+                                                            ListTile(
+                                                              title:Text('Cancel request to : '+"  "+username.toString()),
+                                                              onTap:()=>handleCancelAcceptanceRequest(),
+                                                            ),
+                                                            ExpandablePanel(
+                                                                header: ListTile(
+                                                                  title:Text('Report User'),
+                                                                ),
+                                                                collapsed:Text(''),
+                                                                expanded:Container(
+                                                                  child:Column(
+                                                                    children: [
+                                                                      ListTile(
+                                                                          title:Text('Inappropriate content'),
+                                                                          onTap: () async{
+                                                                            rport='Inappropriate content';
+                                                                            handleReport();
+                                                                          }
+                                                                      ),
+                                                                      ListTile(
+                                                                          title:Text('Scam'),
+                                                                          onTap: () async{
+                                                                            rport='Scam';
+                                                                            handleReport();
+                                                                          }
+                                                                      ),
+                                                                    ],
+                                                                  ),
+                                                                )
+                                                            ),
+                                                          ],
                                                         );
 
                                                     }) .toList()
@@ -579,7 +638,7 @@ var new_unique_id;
 
                       ///Price
                       Padding(
-                        padding: const EdgeInsets.all(3.0),
+                        padding: const EdgeInsets.all(10.0),
                         child: Container(
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(10),
@@ -589,12 +648,8 @@ var new_unique_id;
                           child: FittedBox(
                             child: Padding(
                               padding: const EdgeInsets.all(8.0),
-                              child: Text(pstatus.toString(),
-                                style: TextStyle(
-                                    fontSize:17,
-                                  color:Colors.white,
+                              child: CustomText4(pstatus.toString(),Colors.white
                                 ),
-                                softWrap: true,),
                             ),
                           ),
                         ),
@@ -603,9 +658,9 @@ var new_unique_id;
                   ),
                   ///Description
                   Container(
-                    margin: EdgeInsets.only(left:5, right:5,bottom: 10,top: 5),
+                    margin: EdgeInsets.only(left:8, right:5,bottom: 10,top: 5),
                       alignment: Alignment.centerLeft,
-                      child: Text(description.toString(),
+                      child: CustomText7(description.toString(),
                   )),
                   ///PostImage
                   GestureDetector(
@@ -616,7 +671,9 @@ var new_unique_id;
                       mediaUrl:mediaUrl,
                       description: description,
                       ownerId: ownerId,
-
+                      ingredients:ingredients,
+                      location: city,
+                      time:timestamp,
                     ),
                     child: Container(
                       height: 300,
@@ -643,14 +700,14 @@ var new_unique_id;
             Container(
               height: 30,
               width: size.width,
-              color: Colors.grey.shade50,
+              color: Colors.white,
               child: SizedBox(
               ),
             ),
             ///Colored section to separate posts in list
             Divider(
-              thickness: 15,
-              color: Colors.brown.withOpacity(0.3),
+              thickness: 3,
+              color: Colors.green.withOpacity(0.3),
             ),
           ],
         );
@@ -660,7 +717,8 @@ var new_unique_id;
   }
 
 ShowViewPosts(BuildContext context,
-    {String? username, String? status, String? mediaUrl,String? description,String?ownerId}) {
+    {String? username, String? status, String? mediaUrl,
+      String? description,String?ownerId, String? location,String? ingredients,var time}) {
   Navigator.push(context, MaterialPageRoute(builder: (context) {
     return viewpost(
       postUsername: username,
@@ -668,6 +726,9 @@ ShowViewPosts(BuildContext context,
       postMediaUrl:mediaUrl,
       postDescription:description,
       postOwnerID:ownerId,
+      ingredients: ingredients,
+      location: location,
+      time:time,
     );
   }));
 }
@@ -721,7 +782,7 @@ class _UserProfilePostsState extends State<UserProfilePosts> {
            child: GestureDetector(
         onTap: ()=> Navigator.push(context, MaterialPageRoute(builder: (context) {
       return  PostScreen(
-        id:postOwnerId,
+        id:postOwnerId!,
       );
     })),
          child:  CachedNetworkImage(

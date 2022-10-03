@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:expandable/expandable.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -10,6 +11,7 @@ import 'package:sates/widgets/header.dart';
 import 'package:smooth_star_rating_null_safety/smooth_star_rating_null_safety.dart';
 import 'package:titled_navigation_bar/titled_navigation_bar.dart';
 import 'package:uuid/uuid.dart';
+import '../models/requests.dart';
 import '../models/userfiles.dart';
 import 'package:sates/models/post.dart';
 import 'package:sates/authentication/auth.dart';
@@ -18,6 +20,7 @@ import 'package:readmore/readmore.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 
 import '../secondary_pages/edit_profile.dart';
+import '../widgets/constant_widgets.dart';
 
 
 
@@ -37,6 +40,9 @@ class _ProfileState extends State<Profile> {
   final postsRef = FirebaseFirestore.instance.collection('posts');
   final recordsRef = FirebaseFirestore.instance.collection('records');
   final reviewsRef = FirebaseFirestore.instance.collection('reviews');
+  final reportsRef = FirebaseFirestore.instance.collection('reports');
+  final requestsRef = FirebaseFirestore.instance.collection('requests');
+  final requestsTimelineRef = FirebaseFirestore.instance.collection('requestsTimeline');
   final ratingsRef = FirebaseFirestore.instance.collection('ratings');
 
 
@@ -48,8 +54,10 @@ class _ProfileState extends State<Profile> {
   bool isLoading=false;
   int postCount=0;
   var reviewID= Uuid().v4();
+  String reportId= Uuid().v4();
   final currentUserId= FirebaseAuth.instance.currentUser!.uid;
   List<UserProfilePosts> pposts=[];
+  List<Requests>requests=[];
 
   //Profile page could be for any profile
   // this is the current user
@@ -58,6 +66,7 @@ class _ProfileState extends State<Profile> {
   @override
   void initState() {
     getProfilePosts();
+    getProfileRequests();
     //getProfileReviews();
     buildProfileHeader();
     getRating();
@@ -111,6 +120,7 @@ class _ProfileState extends State<Profile> {
     setState(() {
       isLoading = false;
       postCount = snapshot.docs.length;
+      print(postCount);
       //Iterate over snapshot.documents with map
       //For each Doc deserialize post document
       // snapshot with Post.fromDocument pass in doc to it
@@ -123,7 +133,30 @@ class _ProfileState extends State<Profile> {
     });
   }
 
-  //If Doc Exist You are Following if null doc.exists is false
+
+  getProfileRequests() async {
+    setState(() {
+      isLoading = true;
+    });
+    QuerySnapshot snapshot = await requestsRef
+        .doc(widget.profileId)
+        .collection('userRequests')
+        .orderBy('Timestamp', descending: true)
+        .get();
+
+    setState(() {
+      isLoading = false;
+      //Iterate over snapshot.documents with map
+      //For each Doc deserialize post document
+      // snapshot with Post.fromDocument pass in doc to it
+      // In the end call to list to make it a list
+
+      requests = snapshot.docs.map((doc) => Requests.fromDocument(doc)).toList();
+      //Documents is a list of all the stuff in snapshot
+      //map goes over each document and returns 1 doc each
+      //each doc passed into factory and all are turned into a list
+    });
+  }
 
 
 
@@ -289,9 +322,11 @@ sendReview({String? content,String? from, String? to, required DateTime Timestam
         //physics: Neve rScrollableScrollPhysics(),
         children: [
           buildProfilePosts(),
+          buildProfileRequests(),
           buildProfilebody(),
          // fetchProfileReviews(),
           buildProfileReviews(),
+
         ],
       ),
     );
@@ -327,7 +362,7 @@ buildProfileReviews(){
     return CircularProgressIndicator();
   }else{
     return  Container(
-      color: Colors.grey.shade300,
+      color: Colors.green.shade50,
       child: StreamBuilder(
             stream: FirebaseFirestore.instance
                 .collection('reviews')
@@ -337,12 +372,16 @@ buildProfileReviews(){
                 .snapshots(),
             builder: (BuildContext context, AsyncSnapshot<QuerySnapshot?> snapshot){
               if (snapshot.hasError){
-                return Text('Error');
+                return Center(child: Text('Error loading reviews..'));
               }
-
+              if(snapshot.connectionState==ConnectionState.waiting){
+                return Center(
+                  child:Text('Loading...'),
+                );
+              }
               if(snapshot.hasData && snapshot.data?.size==0){
                 return Center(
-                  child:Text('No pending approvals'),
+                  child:Text('No reviews yet...'),
                 );
               }
               return ListView(
@@ -351,7 +390,6 @@ buildProfileReviews(){
                   Map<String, dynamic> data=
                   document.data()! as Map<String,dynamic>;
                   rfrom=data['From'].toString();
-
                   return FittedBox(
                     child: Container(
                       margin: EdgeInsets.all(8),
@@ -546,7 +584,9 @@ buildProfileReviews(){
 ///profile posts
   buildProfilePosts() {
     if(isLoading){
-      return CircularProgressIndicator();
+      return Center(
+        child:Text('Loading...')
+      );
     }else{
       return GridView(
         padding: EdgeInsets.all(5),
@@ -564,8 +604,320 @@ buildProfileReviews(){
     }
 
     }
+    ///profile requests
+  buildProfileRequests() {
+  return StreamBuilder(
+      stream: FirebaseFirestore.instance
+          .collection('requestsTimeline')
+          .where('OwnerID',isEqualTo:widget.profileId)
+          .orderBy('Timestamp',descending: true)
+          .snapshots(),
+      builder: (BuildContext context, AsyncSnapshot<QuerySnapshot?> snapshot){
+        if (snapshot.hasError){
+          return Text('Error');
+        }
+        if(snapshot.hasData && snapshot.data?.size==0){
+          return Center(
+            child:Text('No posts'),
+          );
+        }
+        return ListView(
+          children:snapshot.data!.docs
+              .map((DocumentSnapshot document){
+            Map<String, dynamic> data=
+            document.data()! as Map<String,dynamic>;
+            r_id=data['RequestId'].toString();
+            final DateTime ttimestamp=DateTime.now();
+            ///Template for requests made by users
+            return ttimestamp.compareTo(data['Expire_at']!.toDate())>0?SizedBox():
+           Container(
+              height: 130,
+              margin: EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                  color:  Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      offset: Offset(0,5),
+                      spreadRadius: 2,
+                      color: Colors.grey.withOpacity(0.3),
+                      blurRadius:7,
+                    ),
+                  ]
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(left: 16.0,top: 5),
+                        child: CustomText7('Requested for'+" "+data['Requested'].toString()),
+                      ),
+                      Expanded(child: SizedBox()),
+                      widget.profileId!=currentUserId?
+                      Padding(
+                        padding: const EdgeInsets.only(right:8.0,top:5),
+                        child:GestureDetector(
+                          onTap:()=>showModalBottomSheet(
+                              isScrollControlled: true,
+                              context: context,
+                              builder: (BuildContext context){
+                                return DraggableScrollableSheet(
+                                    expand: false,
+                                    initialChildSize: 0.6,
+                                    minChildSize: 0.4,
+                                    maxChildSize: 0.9,
+                                    builder: (BuildContext context, ScrollController scrollcontroller){
+                                      return ExpandablePanel(
+                                          header: ListTile(
+                                            title:Text('Report Post'),
+                                          ),
+                                          collapsed:Text(''),
+                                          expanded:Container(
+                                            child:Column(
+                                              children: [
+                                                ListTile(
+                                                    title:Text('Inappropriate content'),
+                                                    onTap: () async{
+                                                      rport='Inappropriate content';
+                                                      handleReport();
+                                                    }
+                                                ),
+                                              ],
+                                            ),
+                                          )
+                                      );
+                                    }
+                                );
+                              }
+                          ),
+                          child: Icon(Icons.info),
+                        ),
+                      ):
+                      Padding(
+                        padding: const EdgeInsets.only(right:8.0,top:5),
+                        child:GestureDetector(
+                          onTap:()=>showModalBottomSheet(
+                              isScrollControlled: true,
+                              context: context,
+                              builder: (BuildContext context){
+                                return DraggableScrollableSheet(
+                                    expand: false,
+                                    initialChildSize: 0.6,
+                                    minChildSize: 0.4,
+                                    maxChildSize: 0.9,
+                                    builder: (BuildContext context, ScrollController scrollcontroller){
+                                      return handleDeletingRequest(data['RequestId'].toString());
+                                    }
+                                );
+                              }
+                          ),
+                          child: Icon(Icons.delete),
+                        ),
+                      ),
 
-///profile about
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      ///UserProfilePhoto
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Container(
+                          height: 85,
+                          width:85,
+                          child:
+                          ///StreamBuilder to get profile image upon update
+                          StreamBuilder(
+                              stream: usersRef.doc(widget.profileId).snapshots(),
+                              //Resolve Value Available In Our Builder Function
+                              builder: (context, snapshot) {
+                                if (!snapshot.hasData) {
+                                  return Center(child: CircularProgressIndicator());
+                                }
+                                //Deserialize
+                                //print(widget.profileId);
+                                var DocData = snapshot.data as DocumentSnapshot;
+                                GUser gUser = GUser.fromDocument(DocData);
+                                return Center(
+                                  child: CachedNetworkImage(
+                                    imageUrl:gUser.profilePhotoUrl.toString(),
+                                    imageBuilder: (context, imageProvider) => Container(
+                                      decoration: BoxDecoration(
+                                        //shape: BoxShape.circle,
+                                        borderRadius: BorderRadius.circular(20),
+                                        image: DecorationImage(
+                                          image: imageProvider,
+                                          fit: BoxFit.fill,
+                                        ),
+                                      ),
+                                    ),
+                                    placeholder: (context, url) => CircularProgressIndicator(),
+                                    errorWidget: (context, url, error) => Icon(Icons.error),
+                                  ),
+                                );
+                              }
+
+                          ),
+                        ),
+                      ),
+                      ///Username,Position,Time
+                      ///Username & position
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          FittedBox(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                CustomText3(data['Username'].toString(),),
+                                Container(
+                                  alignment: Alignment.bottomCenter,
+                                  margin: EdgeInsets.all(8),
+                                  height:5,
+                                  width: 5,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.green,
+                                  ),
+                                ),
+                                CustomText5(data['Requested as'].toString(),FontStyle.italic
+                                ),
+                              ],
+                            ),
+                          ),
+                          SizedBox(
+                            height: 3,
+                          ),
+                          FittedBox(
+                            child: CustomText6(data['Timestamp']),
+                          ),
+                          SizedBox(
+                            height: 10,
+                          ),
+                          ///Price
+                          Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(10),
+                              color: data['Price Status']==null? Colors.green:Colors.orange,
+                            ),
+
+                            ///Price
+                            child: FittedBox(
+                              child: Padding(
+                                padding: const EdgeInsets.all(6.0),
+                                child: Text(data['Price Status']==null?'Free':data['Currency'].toString()+" "+data['Price Status'].toString(),
+                                  style: TextStyle(
+                                    fontSize:15,
+                                    color:Colors.white,
+                                  ),
+                                  softWrap: true,),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      ///Time post was made
+
+                    ],
+                  ),
+
+                ],
+              ),
+            );
+
+          })
+              .toList()
+
+              .cast(),
+
+        );
+      }
+  );
+
+/*    if(isLoading){
+      return Center(
+        child:Text('Loading...')
+      );
+    }else{
+      return Container(
+        color:Colors.green.shade50,
+        child: ListView(
+          children:requests,
+        ),
+      );
+    }*/
+
+    }
+
+    handleDeletingRequest(String r_id){
+     return Column(
+    children: [
+      ListTile(
+        onTap: ()=>timelineDelete(r_id),
+        title: Text('Remove request from timeline'),
+      ),
+      ListTile(
+        onTap: ()=>deleteEntirely(r_id),
+        title: Text('Delete request permanently'),
+      ),
+    ],
+  );
+
+    }
+
+  timelineDelete(String r_id)async{
+    ///change timeline status
+    await requestsRef
+        .doc(widget.profileId)
+        .collection('userRequests')
+        .doc(r_id)
+        .update({
+      'On Timeline':false
+    });
+    ///delete from timeline
+    await requestsTimelineRef
+        .doc(r_id)
+        .delete();
+
+  }
+
+  var r_id;
+
+  deleteEntirely(String r_id)async{
+    ///delete entirely
+    await requestsRef
+        .doc(widget.profileId)
+        .collection('userRequests')
+        .doc(r_id)
+        .delete();
+    await requestsTimelineRef
+        .doc(r_id)
+        .delete();
+  }
+
+  handleReport()async{
+    await rport;
+    final DateTime timestamp= DateTime.now();
+    await reportsRef.doc(reportId).set({
+      'OwnerID':currentUserId,
+      'Report_Id':reportId,
+      'Timestamp':timestamp,
+      'Handled':false,
+      'Content':rport,
+      'PostOwnerID':widget.profileId,
+      'Expire_at':timestamp.add(Duration(days:30))
+    });
+    setState((){
+      String reportId= Uuid().v4();
+    });
+    Navigator.pop(context);
+  }
+
+
+
+  ///profile about
   buildProfilebody() {
     if (isLoading) {
       return CircularProgressIndicator();
@@ -597,11 +949,8 @@ buildProfileReviews(){
               Padding(
                 padding: const EdgeInsets.only(left: 16.0,top:1,bottom: 16),
                 child: FittedBox(
-                  child: Text(gUser.bio.toString()==""? '...':gUser.bio.toString(),
-                    style: TextStyle(
-                        fontSize: 17,
-                        color: Colors.black
-                    ),),
+                  child: CustomText7(gUser.bio.toString()==""? '...':gUser.bio.toString(),
+                    ),
                 ),
               ),
               ///works at
@@ -617,11 +966,8 @@ buildProfileReviews(){
               Padding(
                 padding: const EdgeInsets.only(left: 16.0,bottom: 16),
                 child: FittedBox(
-                  child: Text(gUser.works_at.toString()==""? '...':gUser.works_at.toString(),
-                    style: TextStyle(
-                        fontSize: 17,
-                        color: Colors.black
-                    ),),
+                  child: CustomText7(gUser.works_at.toString()==""? '...':gUser.works_at.toString(),
+                   ),
                 ),
               ),
               ///stays in
@@ -636,11 +982,8 @@ buildProfileReviews(){
               ///stays in from firestore
               Padding(
                 padding: const EdgeInsets.only(left: 16.0,top:2,bottom: 16),
-                child: FittedBox( child:Text(gUser.street_name.toString()==""? '...':gUser.street_name.toString(),
-                  style: TextStyle(
-                      fontSize: 17,
-                      color: Colors.black
-                  ),),
+                child: FittedBox( child:CustomText7(gUser.street_name.toString()==""? '...':gUser.street_name.toString(),
+                  ),
               ),
               )
             ]
@@ -664,8 +1007,12 @@ buildProfileReviews(){
       //Resolve Value Available In Our Builder Function
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
-          return Center(child: CircularProgressIndicator());
+          return Container(
+              height: MediaQuery.of(context).size.height/3,
+              width: MediaQuery.of(context).size.width,
+              color: Colors.green.shade50);
         }
+
         //Deserialize
        //print(widget.profileId);
         var DocData = snapshot.data as DocumentSnapshot;
@@ -684,51 +1031,47 @@ buildProfileReviews(){
                   onTap: (){},
                   child: Container(
                     width: MediaQuery.of(context).size.width,
-                    color: Colors.green,
-                    height: MediaQuery.of(context).size.height/6,
+                    color: Colors.green.shade50,
+                    height: 300,
                     child: CachedNetworkImage(
                       fit: BoxFit.fitWidth,
                       imageUrl:gUser.backprofilePhotoUrl.toString(),
-                      placeholder: (context, url) => Icon(Icons.image),
-                      errorWidget: (context, url, error) => Icon(Icons.image_not_supported),
+                      placeholder: (context, url) => Icon(Icons.person_outline_rounded,size: 40,),
+                      errorWidget: (context, url, error) => Center(child: Text('Upload a cover photo'),),
                     ),
                   ),
                 ),
                 ///ProfilePhoto
                 Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                 /* mainAxisAlignment:MainAxisAlignment.spaceBetween,
+                 crossAxisAlignment: CrossAxisAlignment.start,*/
                   children: [
-                    SizedBox(
-                      width: MediaQuery.of(context).size.width,
-                      height: MediaQuery.of(context).size.height/13,
-                    ),
+                    SizedBox(height:240,),
                     Padding(
                       padding: const EdgeInsets.all(8.0),
-                      child: CircleAvatar(
-                        radius: 50,
-                        child: Center(
-                          child: CachedNetworkImage(
-                            imageUrl:gUser.profilePhotoUrl!,
-                            imageBuilder: (context, imageProvider) => Container(
-                              decoration: BoxDecoration(
-                                //borderRadius: BorderRadius.circular(50),
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.orange,
-                                  width: 2,
-                                ),
-                                image: DecorationImage(
-                                  image: imageProvider,
-                                  fit: BoxFit.fill,
-                                ),
-                              ),
+                      child: CachedNetworkImage(
+                        imageUrl:gUser.profilePhotoUrl!,
+                        imageBuilder: (context, imageProvider) => Container(
+                         height: 100,
+                          width:100,
+                          decoration: BoxDecoration(
+                            //borderRadius: BorderRadius.circular(50),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.orange,
+                              width: 2,
                             ),
-                            placeholder: (context, url) => CircularProgressIndicator(),
-                            errorWidget: (context, url, error) => Icon(Icons.error),
+                            image: DecorationImage(
+                              image: imageProvider,
+                              fit: BoxFit.fill,
+                            ),
                           ),
                         ),
+                        placeholder: (context, url) => Icon(Icons.person),
+                        errorWidget: (context, url, error) => Icon(Icons.person_off),
                       )
-                    )
+                    ),
+                    
                   ],
                 )
               ],
@@ -743,28 +1086,21 @@ buildProfileReviews(){
                   padding: const EdgeInsets.only(left: 16.0,top: 8,bottom: 1),
                   child: Container(
                     alignment: Alignment.centerLeft,
-                    child: Text(
+                    child: CustomText2(
                       (gUser.lname.toString()+" "+gUser.fname.toString()),
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20.0,
-                      ),
+
                     ),
                   ),
                 ),
                 widget.profileId== currentUserId? GestureDetector(
-                  onTap:()=>select(context,gUser.fname.toString(),
+                  onTap:()=>select(context,gUser.lname.toString()+" "+gUser.fname.toString(),
                       gUser.profilePhotoUrl.toString(),
                       gUser.backprofilePhotoUrl.toString() ),
                   child: Container(
                       margin: EdgeInsets.only(right: 8.0,top: 8,bottom: 1),
                       child: FittedBox(child: Padding(
                         padding: const EdgeInsets.all(6.0),
-                        child: Text('Edit Profile',
-                        style: TextStyle(
-                          color: Colors.green
-                        ),
-                        textAlign: TextAlign.center,
+                        child: CustomText7('Edit Profile',
                         ),
                       ),
                       ),
@@ -782,12 +1118,9 @@ buildProfileReviews(){
             Container(
               alignment: Alignment.centerLeft,
               padding: EdgeInsets.only(left: 16.0,bottom: 2),
-              child: Text(
+              child: CustomText5(
                 gUser.email.toString(),
-                style: TextStyle(
-                  fontWeight: FontWeight.normal,
-                  color: Colors.black.withOpacity(0.5)
-                ),
+                null
               ),
             ),
             Padding(
@@ -817,11 +1150,8 @@ buildProfileReviews(){
             ),
             Padding(
               padding: const EdgeInsets.only(left:20.0,bottom:14),
-              child: Text(gUser.no_rate_ppl.toString()+' people rated',
-              style: TextStyle(
-                color: Colors.grey,
-                fontStyle: FontStyle.italic,
-              ),
+              child: CustomText5(gUser.no_rate_ppl.toString()+' people rated',
+              FontStyle.italic,
               ),
             ),
 
@@ -832,7 +1162,8 @@ buildProfileReviews(){
   }
 
   ///edit profile options
-  select(parentContext, String? Username, String? Profilephoto,String? backProfilePhoto){
+  select(parentContext, String? Username,
+      String? Profilephoto,String? backProfilePhoto){
     return showDialog(
         context: parentContext,
         builder: (context){
@@ -841,23 +1172,77 @@ buildProfileReviews(){
             children: [
               SimpleDialogOption(
                 child:Text('Change Profile Details'),
-                onPressed:()=>Navigator.push(context,
-                    MaterialPageRoute(builder: (context)=>
-                        EditProfileDetails())),
+                onPressed:()=>
+                    showModalBottomSheet(
+                        isScrollControlled: true,
+                        //barrierDismissible: true,
+                        //semanticsDismissible: true,
+                        barrierColor: Colors.black.withOpacity(0.2),
+                        context: context,
+                        builder: (BuildContext context){
+                          return DraggableScrollableSheet(
+                            initialChildSize: 0.9,
+                            minChildSize: 0.5,
+                            maxChildSize: 0.9,
+                            expand: false,
+                            builder:
+                                (BuildContext context, ScrollController scrollController) {
+                              return  EditProfileDetails();
+                            },
+
+                          );
+                        }
+                    ),
 
               ),
               SimpleDialogOption(
-                child:Text('Change Profile Image'),
-                onPressed:()=>Navigator.push(context,
-                    MaterialPageRoute(builder: (context)=>
-                    EditProfileImage(Username:Username,imFile:Profilephoto,))),
+                child:Text('Change Profile Photo'),
+                onPressed:()=>
+                    showModalBottomSheet(
+                        isScrollControlled: true,
+                        //barrierDismissible: true,
+                        //semanticsDismissible: true,
+                        barrierColor: Colors.black.withOpacity(0.2),
+                        context: context,
+                        builder: (BuildContext context){
+                          return DraggableScrollableSheet(
+                            initialChildSize: 0.55,
+                            minChildSize: 0.55,
+                            maxChildSize: 0.55,
+                            expand: false,
+                            builder:
+                                (BuildContext context, ScrollController scrollController) {
+                              return EditProfileImage(Username:Username,imFile:Profilephoto,);
+                            },
+
+                          );
+                        }
+                    ),
 
               ),
               SimpleDialogOption(
-                child:Text('Change Background Image'),
-                onPressed:()=>Navigator.push(context,
-                    MaterialPageRoute(builder: (context)=>
-                        EditProfileBackImage(Username:Username,imFile:backProfilePhoto,))),
+                child:Text('Change Cover Photo'),
+                onPressed:()=>
+                    showModalBottomSheet(
+                        isScrollControlled: true,
+                        //barrierDismissible: true,
+                        //semanticsDismissible: true,
+                        barrierColor: Colors.black.withOpacity(0.2),
+                        context: context,
+                        builder: (BuildContext context){
+                          return DraggableScrollableSheet(
+                            initialChildSize: 0.7,
+                            minChildSize: 0.6,
+                            maxChildSize: 0.7,
+                            expand: false,
+                            builder:
+                                (BuildContext context, ScrollController scrollController) {
+                              return EditProfileBackImage(Username:Username,imFile:backProfilePhoto,);
+                            },
+
+                          );
+                        }
+                    ),
 
               ),
               SimpleDialogOption(
@@ -997,7 +1382,7 @@ setState((){
   }
 
   var msg;
-
+var rport;
  bool isOpen=false;
 var rfrom;
 var rtime;
@@ -1022,18 +1407,15 @@ var newReviewId;
     return Scaffold(
       backgroundColor: Colors.white,
       appBar:AppBar(
+        elevation: 0,
         //centerTitle: true,
         iconTheme: IconThemeData(
             color: Colors.orange
         ),
-        title:Text('Profile',
-          style: TextStyle(
-              color: Colors.orange,
-              fontSize: 20
-          ),
-          textAlign: TextAlign.center,
+        title:CustomText8('Profile',
+
         ),
-        toolbarHeight:60,
+        toolbarHeight:100,
         backgroundColor: Colors.white,
         actions: [
             GestureDetector(
@@ -1062,13 +1444,17 @@ var newReviewId;
             inactiveColor: Colors.green,
             enableShadow: false,
             height: 40,
-            reverse: true,
+            reverse: false,
             currentIndex: pageIndex,
             onTap: onTap,
             items: [
               TitledNavigationBarItem(
                 icon:Icon(Icons.all_inclusive),
                 title:Text('Posts'),
+              ),
+              TitledNavigationBarItem(
+                icon:Icon(Icons.all_inclusive),
+                title:Text('Requests'),
               ),
               TitledNavigationBarItem(
                 icon:Icon(Icons.free_breakfast),
@@ -1100,7 +1486,6 @@ var newReviewId;
               key: _formkey,
               child: Container(
                 margin: EdgeInsets.only(left: 30),
-                
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
@@ -1111,7 +1496,11 @@ var newReviewId;
                         color: Colors.green.withOpacity(0.3),
                         blurRadius:3,
                       ),
-                    ]
+                    ],
+                  border: Border.all(
+                    width: 0.5,
+                    color: Colors.orange
+                  ),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -1162,7 +1551,7 @@ var newReviewId;
           ):
           FloatingActionButton(
           elevation: 5.5,
-          backgroundColor: Colors.white,
+          backgroundColor:Colors.green.shade50,
             child: Icon(Icons.edit_outlined,
             color: Colors.orange,
             ),

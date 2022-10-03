@@ -6,6 +6,7 @@ import 'package:sates/models/post.dart';
 import 'package:titled_navigation_bar/titled_navigation_bar.dart';
 
 import '../models/userfiles.dart';
+import '../widgets/constant_widgets.dart';
 
 class ApprovalsScreen extends StatefulWidget {
 
@@ -23,21 +24,20 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
   final currentUserId= FirebaseAuth.instance.currentUser!.uid;
   List<Post>posts=[];
   getTimeline()async{
+      QuerySnapshot snapshot=
+          await timelineRef
+          .where('PostId', isEqualTo:p_Id.toString())
+          .get();
 
-    QuerySnapshot snapshot=
-    await timelineRef
-        .orderBy('Timestamp',descending: true)
-        .get();
-    List<Post> posts=snapshot.docs.map((doc)=>Post.fromDocument(doc))
-        .toList();
-    this.posts=posts;
 
-  }
-  buildTimeline(){
-    if(posts==null){
-      return Text('No posts');
-    }
-    return ListView(children:posts);
+        List<Post> posts=snapshot.docs.map((doc)=>Post.fromDocument(doc))
+            .toList();
+        this.posts=posts;
+
+
+
+
+
   }
 
 
@@ -52,13 +52,6 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
     setState((){
       this.pageIndex = pageIndex;
     });
-  }
-
-  @override
-  void initstate(){
-    //getTimeline();
-    super.initState();
-
   }
 ///change request sender approval status
   changeSenderApprovalStatus({bool? status,String? from,String? unique_id}){
@@ -88,7 +81,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
   ///update records sharedSuccessfully
   addToSenderSharedSuccessfully({
     bool? status,String? from,String? unique_id,
-    String? timestamp,required bool pending
+    DateTime? timestamp,required bool pending
   }){
     recordsRef
         .doc(currentUserId)
@@ -103,7 +96,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
 
   ///Update request sender receivedSuccessfully records
   addToReceiverReceivedSuccessfully({bool? status,
-    String? from,String? unique_id, String? timestamp,
+    String? from,String? unique_id, DateTime? timestamp,
     required bool pending,
   }){
     recordsRef
@@ -118,19 +111,20 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
   }
 
 
+
   handleYes()async{
     final DateTime Timestamp= DateTime.now();
     await addToReceiverReceivedSuccessfully(
       status:true,
       pending: true,
-      timestamp: Timestamp.toString(),
+      timestamp: Timestamp,
       unique_id:unique_id,
       from:From,
     );
     await addToSenderSharedSuccessfully(
       status:true,
       pending: true,
-      timestamp: Timestamp.toString(),
+      timestamp: Timestamp,
       unique_id:unique_id,
     );
   }
@@ -156,7 +150,8 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
             .collection('requests')
             .doc(currentUserId)
             .collection('acceptanceRequestsReceived')
-            .where('Status',isEqualTo:null)
+            .where('Pending', isNull: true)
+            .where('Status', isNull: true)
             .snapshots(),
         builder: (BuildContext context, AsyncSnapshot<QuerySnapshot?> snapshot){
           if (snapshot.hasError){
@@ -190,12 +185,13 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                 .map((DocumentSnapshot document){
               Map<String, dynamic> data=
               document.data()! as Map<String,dynamic>;
-
-              return data['Status'].toString()=="null"?
-              Container(
-                height: 150,
+              return Container(
+                height: 160,
                 margin: EdgeInsets.all(8),
-                color: Colors.white,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(7),
+                  color: Colors.white,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -203,10 +199,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                       children: [
                         Padding(
                           padding: const EdgeInsets.only(top:8.0,left:8),
-                          child: Text('Request about your post',
-                            style: TextStyle(
-                                color: Colors.black
-                            ),
+                          child: CustomText7('You received a request about your post',
                           ),
                         ),
                         Expanded(child: SizedBox()),
@@ -215,27 +208,34 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                               isScrollControlled: true,
                               context: context,
                               builder: (BuildContext context){
-                                return DraggableScrollableSheet(
-                                    expand: false,
-                                    initialChildSize: 0.6,
-                                    minChildSize: 0.4,
-                                    maxChildSize: 0.9,
-                                    builder: (BuildContext context, ScrollController scrollcontroller){
-                                      return PostView(postId: data['PostId'].toString(),Id: currentUserId,);
+                                p_Id=data['PostId'].toString();
+                                getTimeline();
+                                return FutureBuilder(
+                                    future:getTimeline(),
+                                    builder: (context, snapshot) {
+                                      return DraggableScrollableSheet(
+                                          expand: false,
+                                          initialChildSize: 0.6,
+                                          minChildSize: 0.4,
+                                          maxChildSize: 0.9,
+                                          builder: (BuildContext context, ScrollController scrollcontroller){
+                                            return ListView(
+                                              children:posts,
+                                            );
+                                          }
+                                      );
                                     }
                                 );
                               }
                           ),
-
                           child: Padding(
-                            padding: const EdgeInsets.only(top:8.0,left:8),
-                            child: Text('View post',
-                              style: TextStyle(
-                                  color: Colors.green
-                              ),
+                            padding:EdgeInsets.only(right:8,top: 8),
+                            child: CustomText4('View post',
+                                Colors.green
                             ),
                           ),
                         ),
+
                       ],
                     ),
 
@@ -244,43 +244,43 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                         //Resolve Value Available In Our Builder Function
                         builder: (context, snapshot) {
                           if (!snapshot.hasData) {
-                            return Center(child: CircularProgressIndicator());
+                            return Padding(
+                              padding: const EdgeInsets.only(left: 8.0,right: 8),
+                              child: Container(
+                                height: 50,
+                                color: Colors.green.shade50.withOpacity(0.3),
+                              ),
+                            );
                           }
                           //Deserialize
                           //print(widget.profileId);
                           var DocData = snapshot.data as DocumentSnapshot;
                           GUser gUser = GUser.fromDocument(DocData);
                           return Padding(
-                            padding: const EdgeInsets.all(20.0),
+                            padding: const EdgeInsets.fromLTRB(20.0,15,20,5),
                             child:Row(
                               children: [
-                                CircleAvatar(
-                                  radius: 20,
-                                  child: Center(
-                                    child: CachedNetworkImage(
-                                      imageUrl:gUser.profilePhotoUrl.toString(),
-                                      imageBuilder: (context, imageProvider) => Container(
-                                        decoration: BoxDecoration(
-                                          //borderRadius: BorderRadius.circular(50),
-                                          shape: BoxShape.circle,
-                                          image: DecorationImage(
-                                            image: imageProvider,
-                                            fit: BoxFit.fill,
-                                          ),
-                                        ),
+                                CachedNetworkImage(
+                                  imageUrl:gUser.profilePhotoUrl.toString(),
+                                  imageBuilder: (context, imageProvider) => Container(
+                                    height: 45,
+                                    width: 45,
+                                    decoration: BoxDecoration(
+                                      //borderRadius: BorderRadius.circular(50),
+                                      shape: BoxShape.circle,
+                                      image: DecorationImage(
+                                        image: imageProvider,
+                                        fit: BoxFit.fill,
                                       ),
-                                      placeholder: (context, url) => CircularProgressIndicator(),
-                                      errorWidget: (context, url, error) => Icon(Icons.error),
                                     ),
                                   ),
+                                  placeholder: (context, url) => CircularProgressIndicator(),
+                                  errorWidget: (context, url, error) => Icon(Icons.error),
                                 ),
                                 Padding(
                                   padding: const EdgeInsets.only(left:8.0),
-                                  child: Text(gUser.lname.toString()+" "+gUser.fname.toString(),
-                                    style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold
-                                    ),
+                                  child: CustomText2(gUser.lname.toString()+" "+gUser.fname.toString(),
+
                                   ),
                                 ),
                               ],
@@ -290,6 +290,12 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
 
                         }
 
+                    ),
+                    Padding(
+                      padding:EdgeInsets.fromLTRB(8,8,8,15),
+                      child: CustomText6(data['Timestamp'],
+
+                      ),
                     ),
                     Row(
                       children: [
@@ -306,7 +312,15 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                               handleApproval();
 
                             },
-                            child: Text('Yes')),
+                            child:Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  color: Colors.green,
+                                ),
+                                child: FittedBox(child: Padding(
+                                  padding: EdgeInsets.all(10.0),
+                                  child: CustomText4('Yes',Colors.white),
+                                )))),
                         SizedBox(
                           width: 10,
                         ),
@@ -315,29 +329,190 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                             handleApproval();
                             setState(()=>value = false);
                           },
-                          child: Padding(
-                            padding: const EdgeInsets.only(right:10.0),
-                            child: Text('No'),
-                          ),
+                          child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                color: Colors.red,
+                              ),
+                              child: FittedBox(child: Padding(
+                                padding: EdgeInsets.all(10.0),
+                                child: CustomText4('No',Colors.white),
+                              ))),
                         ),
                       ],
                     ),
 
-
-
-                    /*  Container(
-                        height: 200,
-                        width: 200,
-                        child: FittedBox(
-                          child: buildTimeline(),
-                        ),
-
-                      ),*/
-                    Divider(),
                   ],
                 ),
-              ):
-              SizedBox();
+              );
+
+            })
+                .toList()
+
+                .cast(),
+
+          );
+        }
+    );
+  }
+  buildApprovedList(){
+    return StreamBuilder<QuerySnapshot?>(
+        stream:FirebaseFirestore.instance
+            .collection('requests')
+            .doc(currentUserId)
+            .collection('acceptanceRequestsReceived')
+            .where('Status',isEqualTo:true)
+            .snapshots(),
+        builder: (BuildContext context, AsyncSnapshot<QuerySnapshot?> snapshot){
+          if (snapshot.hasError){
+            return Center(
+                child:Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('Something went wrong'),
+                  ],
+                )
+            );
+          }
+          if(snapshot.connectionState==ConnectionState.waiting){
+            return Center(
+                child:Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(),
+                    Text('Loading'),
+                  ],
+                )
+            );
+          }
+          if(snapshot.hasData && snapshot.data?.size==0){
+            return Center(
+              child:Text('No approved requests yet'),
+            );
+          }
+          return ListView(
+            children:snapshot.data!.docs
+                .map((DocumentSnapshot document){
+              Map<String, dynamic> data=
+              document.data()! as Map<String,dynamic>;
+
+              return
+              Container(
+                height: 120,
+                margin: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(7),
+                  color: Colors.white,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(top:8.0,left:8),
+                          child: CustomText7('Approved request about your post',
+                          ),
+                        ),
+                        Expanded(child: SizedBox()),
+                        GestureDetector(
+                          onTap: ()=> showModalBottomSheet(
+                              isScrollControlled: true,
+                              context: context,
+                              builder: (BuildContext context){
+                                p_Id=data['PostId'].toString();
+                                getTimeline();
+                                return FutureBuilder(
+                                    future:getTimeline(),
+                                    builder: (context, snapshot) {
+                                      return DraggableScrollableSheet(
+                                          expand: false,
+                                          initialChildSize: 0.6,
+                                          minChildSize: 0.4,
+                                          maxChildSize: 0.9,
+                                          builder: (BuildContext context, ScrollController scrollcontroller){
+                                            return ListView(
+                                              children:posts,
+                                            );
+                                          }
+                                      );
+                                    }
+                                );
+                              }
+                          ),
+                          child: Padding(
+                            padding:EdgeInsets.only(right:8,top: 8),
+                            child: CustomText4('View post',
+                                Colors.green
+                            ),
+                          ),
+                        ),
+
+                      ],
+                    ),
+
+                    StreamBuilder(
+                        stream: usersRef.doc(data['From']).snapshots(),
+                        //Resolve Value Available In Our Builder Function
+                        builder: (context, snapshot) {
+                          if (!snapshot.hasData) {
+                            return Padding(
+                              padding: const EdgeInsets.only(left: 8.0,right: 8),
+                              child: Container(
+                                height: 50,
+                                color: Colors.green.shade50.withOpacity(0.3),
+                              ),
+                            );
+                          }
+                          //Deserialize
+                          //print(widget.profileId);
+                          var DocData = snapshot.data as DocumentSnapshot;
+                          GUser gUser = GUser.fromDocument(DocData);
+                          return Padding(
+                            padding: const EdgeInsets.fromLTRB(20.0,15,20,5),
+                            child:Row(
+                              children: [
+                                CachedNetworkImage(
+                                  imageUrl:gUser.profilePhotoUrl.toString(),
+                                  imageBuilder: (context, imageProvider) => Container(
+                                    height: 45,
+                                    width: 45,
+                                    decoration: BoxDecoration(
+                                      //borderRadius: BorderRadius.circular(50),
+                                      shape: BoxShape.circle,
+                                      image: DecorationImage(
+                                        image: imageProvider,
+                                        fit: BoxFit.fill,
+                                      ),
+                                    ),
+                                  ),
+                                  placeholder: (context, url) => CircularProgressIndicator(),
+                                  errorWidget: (context, url, error) => Icon(Icons.error),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.only(left:8.0),
+                                  child: CustomText2(gUser.lname.toString()+" "+gUser.fname.toString(),
+
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+
+
+                        }
+
+                    ),
+                    Padding(
+                      padding:EdgeInsets.fromLTRB(8,8,8,15),
+                      child: CustomText6(data['Timestamp'],
+
+                      ),
+                    ),
+                  ],
+                ),
+              );
 
             })
                 .toList()
@@ -349,6 +524,9 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
     );
   }
 
+
+   var p_Id;
+  bool isLoading=false;
   ///approvals sent list getter
   buildSentAcceptanceRequestsList(){
     return StreamBuilder<QuerySnapshot?>(
@@ -356,7 +534,8 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
             .collection('requests')
             .doc(currentUserId)
             .collection('acceptanceRequestsSent')
-            .where('Pending',isEqualTo:true)
+            .where('Pending',isEqualTo:null)
+            .where('Status',isEqualTo:null)
             .snapshots(),
         builder: (BuildContext context, AsyncSnapshot<QuerySnapshot?> snapshot){
           if (snapshot.hasError){
@@ -392,11 +571,15 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
               document.data()! as Map<String,dynamic>;
               // From=data['To'].toString();
               // unique_id=data['UniqueId'].toString();
-              return data['Status'].toString()=="null"?
+              return
               Container(
-                height: 150,
+                height: 120,
                 margin: EdgeInsets.all(8),
-                color: Colors.white,
+
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(7),
+                  color: Colors.white,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -404,10 +587,8 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                       children: [
                         Padding(
                           padding: const EdgeInsets.only(top:8.0,left:8),
-                          child: Text('Sent Request about this post',
-                            style: TextStyle(
-                                color: Colors.black
-                            ),
+                          child: CustomText7('You sent request about a post',
+
                           ),
                         ),
                         Expanded(child: SizedBox()),
@@ -416,41 +597,98 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                               isScrollControlled: true,
                               context: context,
                               builder: (BuildContext context){
-                                return DraggableScrollableSheet(
-                                    expand: false,
-                                    initialChildSize: 0.6,
-                                    minChildSize: 0.4,
-                                    maxChildSize: 0.9,
-                                    builder: (BuildContext context, ScrollController scrollcontroller){
-                                      return PostView(postId: data['PostId'].toString(),Id:data['To'].toString(),);
-                                    }
+                                p_Id=data['PostId'].toString();
+                                getTimeline();
+                                return FutureBuilder(
+                                  future:getTimeline(),
+                                  builder: (context, snapshot) {
+                                    return DraggableScrollableSheet(
+                                        expand: false,
+                                        initialChildSize: 0.6,
+                                        minChildSize: 0.4,
+                                        maxChildSize: 0.9,
+                                        builder: (BuildContext context, ScrollController scrollcontroller){
+                                              return ListView(
+                                                children:posts,
+                                              );
+                                            }
+                                    );
+                                  }
                                 );
                               }
                           ),
-
                           child: Padding(
-                            padding: const EdgeInsets.only(top:8.0,left:8),
-                            child: Text('View post',
-                              style: TextStyle(
-                                  color: Colors.green
-                              ),
+                            padding:EdgeInsets.all(8),
+                            child: CustomText4('View post',
+                             Colors.green
                             ),
                           ),
                         ),
                       ],
                     ),
+                    StreamBuilder(
+                        stream: usersRef.doc(data['To']).snapshots(),
+                        //Resolve Value Available In Our Builder Function
+                        builder: (context, snapshot) {
+                          if (!snapshot.hasData) {
+                            return Padding(
+                              padding: const EdgeInsets.only(left: 8.0,right: 8),
+                              child: Container(
+                                height: 50,
+                                color: Colors.green.shade50.withOpacity(0.3),
+                              ),
+                            );
+                          }
+                          //Deserialize
+                          //print(widget.profileId);
+                          var DocData = snapshot.data as DocumentSnapshot;
+                          GUser gUser = GUser.fromDocument(DocData);
+                          return Padding(
+                            padding: const EdgeInsets.fromLTRB(20.0,20,20,5),
+                            child:Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 20,
+                                  child: Center(
+                                    child: CachedNetworkImage(
+                                      imageUrl:gUser.profilePhotoUrl.toString(),
+                                      imageBuilder: (context, imageProvider) => Container(
+                                        decoration: BoxDecoration(
+                                          //borderRadius: BorderRadius.circular(50),
+                                          shape: BoxShape.circle,
+                                          image: DecorationImage(
+                                            image: imageProvider,
+                                            fit: BoxFit.fill,
+                                          ),
+                                        ),
+                                      ),
+                                      placeholder: (context, url) => CircularProgressIndicator(),
+                                      errorWidget: (context, url, error) => Icon(Icons.error),
+                                    ),
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.only(left:8.0),
+                                  child: CustomText2(gUser.lname.toString()+" "+gUser.fname.toString(),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+
+
+                        }
+
+                    ),
                     Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: Text((data['To']).toString(),
-                        style: TextStyle(
-                            color: Colors.green
-                        ),
+                      padding:EdgeInsets.all(8),
+                      child: CustomText6(data['Timestamp'],
+
                       ),
                     ),
                   ],
                 ),
-              ):
-              SizedBox();
+              );
 
             })
                 .toList()
@@ -462,119 +700,6 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
     );
   }
 
-/*  ///approvals received list getter
-  buildReceivedAcceptanceRequestsList(){
-    return StreamBuilder<QuerySnapshot?>(
-        stream:FirebaseFirestore.instance
-            .collection('requests')
-            .doc(currentUserId)
-            .collection('acceptanceRequestsReceived')
-            .where('Pending',isEqualTo: false)
-            .where('Status',isEqualTo: "true")
-            .snapshots(),
-        builder: (BuildContext context, AsyncSnapshot<QuerySnapshot?> snapshot){
-          if (snapshot.hasError){
-            return Center(
-                child:Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text('Something went wrong'),
-                  ],
-                )
-            );
-          }
-          if(snapshot.connectionState==ConnectionState.waiting){
-            return Center(
-                child:Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(),
-                    Text('Loading'),
-                  ],
-                )
-            );
-          }
-          if(snapshot.hasData && snapshot.data?.size==0){
-            return Center(
-              child:Text('No received requests'),
-            );
-          }
-          return ListView(
-            children:snapshot.data!.docs
-                .map((DocumentSnapshot document){
-              Map<String, dynamic> data=
-              document.data()! as Map<String,dynamic>;
-              // From=data['To'].toString();
-              // unique_id=data['UniqueId'].toString();
-              return data['Status'].toString()=="null"?
-              Container(
-                height: 150,
-                margin: EdgeInsets.all(8),
-                color: Colors.white,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(top:8.0,left:8),
-                          child: Text('Sent Request about this post',
-                            style: TextStyle(
-                                color: Colors.black
-                            ),
-                          ),
-                        ),
-                        Expanded(child: SizedBox()),
-                        GestureDetector(
-                          onTap: ()=> showModalBottomSheet(
-                              isScrollControlled: true,
-                              context: context,
-                              builder: (BuildContext context){
-                                return DraggableScrollableSheet(
-                                    expand: false,
-                                    initialChildSize: 0.6,
-                                    minChildSize: 0.4,
-                                    maxChildSize: 0.9,
-                                    builder: (BuildContext context, ScrollController scrollcontroller){
-                                      return PostView(postId: data['PostId'].toString(),Id:data['From'].toString(),);
-                                    }
-                                );
-                              }
-                          ),
-
-                          child: Padding(
-                            padding: const EdgeInsets.only(top:8.0,left:8),
-                            child: Text('View post',
-                              style: TextStyle(
-                                  color: Colors.green
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: Text((data['To']).toString(),
-                        style: TextStyle(
-                            color: Colors.green
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ):
-              SizedBox();
-
-            })
-                .toList()
-
-                .cast(),
-
-          );
-        }
-    );
-  }*/
 
 bool? value;
   var From;
@@ -586,9 +711,11 @@ var unique_id;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.green.shade50,
       appBar:AppBar(
         automaticallyImplyLeading: false,
         centerTitle: true,
+        elevation: 0,
         iconTheme: IconThemeData(
             color: Colors.orange
         ),
@@ -614,19 +741,23 @@ var unique_id;
                 inactiveColor: Colors.green,
                 enableShadow: false,
                 height: 40,
-                reverse: true,
+                reverse: false,
                 currentIndex: pageIndex,
                 onTap: onTap,
                 items: [
                   TitledNavigationBarItem(
-                    icon:Icon(Icons.all_inclusive),
+                    icon:Icon(Icons.downloading_outlined),
                     title:Text('Pending'),
                   ),
+
                   TitledNavigationBarItem(
-                    icon:Icon(Icons.free_breakfast),
+                    icon:Icon(Icons.send_outlined),
                     title:Text('Sent'),
                   ),
-
+                  TitledNavigationBarItem(
+                    icon:Icon(Icons.mark_chat_read_rounded),
+                    title:Text('Approved'),
+                  ),
                 ],
               ),
             ),
@@ -641,7 +772,7 @@ var unique_id;
         children: [
           buildPendingApprovalsList(),
           buildSentAcceptanceRequestsList(),
-
+          buildApprovedList(),
         ],
       ),
 

@@ -7,6 +7,8 @@ import 'package:titled_navigation_bar/titled_navigation_bar.dart';
 
 import '../models/requests.dart';
 import '../models/userfiles.dart';
+import '../secondary_pages/makePostForm.dart';
+import '../widgets/constant_widgets.dart';
 
 class Requests_screen extends StatefulWidget {
   const Requests_screen({Key? key}) : super(key: key);
@@ -35,19 +37,45 @@ class _Requests_screenState extends State<Requests_screen> {
   @override
   void initState() {
     getUserLoc();
+    //deleteExpiredPosts();
     super.initState();
 
   }
 
+///deleting expired posts
+ /* deleteExpiredPosts() async {
+    final currentUserId= FirebaseAuth.instance.currentUser!.uid;
+    final DateTime timestamp= DateTime.now();
+    List<R_template>rposts=[];
+    QuerySnapshot snapshot = await requestsTimelineRef
+        //.where('Expire_at',isGreaterThan:timestamp.day)
+        .get();
+    rposts = snapshot.docs.map((doc) => R_template.fromDocument(doc)).toList();
+    var i;
+    DateTime? time;
+    for(i=1;i<=snapshot.docs.length;i++){
+       R_template r_template = R_template.fromDocument(snapshot);
+      time=r_template.timestamp;
+      print(r_template.toString());
+      QuerySnapshot dsnapshot = await requestsTimelineRef
+          .where('Expire_at',isGreaterThan:time!.add(Duration(days:1)))
+      //.where('Expire_at',isGreaterThan:timestamp.day)
+          .get();
+      var requestId = dsnapshot.docs.single.id;
+      print(requestId.toString());
+      requestsTimelineRef
+          .doc(requestId)
+          .delete();
+    };
 
-
+  }*/
   getUserLoc()async{
     if (currentUser!=null)
       await usersRef
           .doc(currentUser)
           .get()
           .then((ds){
-        var loc=ds.data()!['Location'];
+        var loc=ds.data()!['City'];
         setState(()=> _dropdownValue=loc);
         // print(currentUserName);
       }).catchError((e){
@@ -75,25 +103,101 @@ class _Requests_screenState extends State<Requests_screen> {
   }
 
 
+  handleDeleteonExpiry()async{
+    final currentUserId= FirebaseAuth.instance.currentUser!.uid;
+    final DateTime timestamp= DateTime.now();
+    final requestsTimelineRef = FirebaseFirestore.instance.collection('requestsTimeline');
+
+    await StreamBuilder<QuerySnapshot?>(
+        stream:FirebaseFirestore.instance
+            .collection('requestsTimeline')
+            .where('Expire_at',isLessThan:timestamp)
+            .snapshots(),
+        builder: (BuildContext context, AsyncSnapshot<QuerySnapshot?> snapshot){
+          return ListView(
+            children:snapshot.data!.docs
+                .map((DocumentSnapshot document){
+              Map<String, dynamic> data=
+              document.data()! as Map<String,dynamic>;
+              var id=data['OwnerID'].toString();
+              var request_id=data['RequestId'].toString();
+              print(request_id);
+              return requestsTimelineRef
+                  .doc(request_id)
+                  .delete();
+
+            })
+                .toList()
+
+                .cast(),
+
+          );
+        }
+    );
+
+
+
+
+  }
+
+
   getRequestsTimeline()async{
+
     QuerySnapshot snapshot=
     await requestsTimelineRef
-        .where('Location',isEqualTo: _dropdownValue)
+        .where('City',isEqualTo: _dropdownValue)
         .orderBy('Timestamp',descending: true)
         .get();
     List<Requests> posts=snapshot.docs.map((doc)=>Requests.fromDocument(doc))
         .toList();
     setState(()=>  this.posts=posts);
 
-
   }
   buildRequestsTimeline(){
     if(posts==null){
-      return Text('No posts');
+      return Center(child: Text('No posts'));
     }
     return ListView(children:posts);
   }
 
+  getFreeTimeline()async{
+    QuerySnapshot snapshot=
+    await requestsTimelineRef
+        .where('City',isEqualTo: _dropdownValue)
+        .where('Price Status',isNull:true)
+        .orderBy('Timestamp',descending: true)
+        .get();
+    List<Requests> posts=snapshot.docs.map((doc)=>Requests.fromDocument(doc))
+        .toList();
+    setState(()=>  this.fposts=posts);
+
+  }
+  buildFreeTimeline(){
+    if(fposts==null){
+      return Text('No posts');
+    }
+    return ListView(children:fposts);
+  }
+
+  getPaidTimeline()async{
+    QuerySnapshot snapshot=
+    await requestsTimelineRef
+        .where('City',isEqualTo: _dropdownValue)
+        .where('Price Status',isEqualTo:null)
+        .orderBy('Timestamp',descending: true)
+        .get();
+    List<Requests> posts=snapshot.docs.map((doc)=>Requests.fromDocument(doc))
+        .toList();
+    setState(()=>  this.pposts=posts);
+
+
+  }
+  buildPaidTimeline(){
+    if(pposts==null){
+      return Text('No posts');
+    }
+    return ListView(children:pposts);
+  }
 
   void dropdownCallback(selectedValue){
 
@@ -108,8 +212,9 @@ class _Requests_screenState extends State<Requests_screen> {
 
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
-      backgroundColor: Colors.green.shade100.withOpacity(0.1),
+      backgroundColor: Colors.green.shade50,
       // drawer: Drawer(child: Side(),),
       key: scaffoldKey,
       drawer: Drawer(child: Side(),),
@@ -246,11 +351,117 @@ class _Requests_screenState extends State<Requests_screen> {
 
                   }),
             ),
+            RefreshIndicator(
+              onRefresh: () =>getFreeTimeline(),
+              child: FutureBuilder(
+                  future:getRequestsTimeline(),
+                  builder: (context,snapshot){
+                    if (snapshot.hasData)
+                      return CircularProgressIndicator();
+                    return buildFreeTimeline();
+
+                  }),
+            ),
+            RefreshIndicator(
+              onRefresh: () =>getPaidTimeline(),
+              child: FutureBuilder(
+                  future:getRequestsTimeline(),
+                  builder: (context,snapshot){
+                    if (snapshot.hasData)
+                      return CircularProgressIndicator();
+                    return buildPaidTimeline();
+
+                  }),
+            ),
 
           ]
 
 
       ),
+     /* floatingActionButton: ExpandableFab(
+        distance: 50,
+        children: [
+          ///Share Icon and text
+          GestureDetector(
+            onTap: ()=>showModalBottomSheet(
+                isScrollControlled: true,
+                //barrierDismissible: true,
+                //semanticsDismissible: true,
+                barrierColor: Colors.black.withOpacity(0.2),
+                context: context,
+                builder: (BuildContext context){
+                  return DraggableScrollableSheet(
+                    initialChildSize: 0.9,
+                    minChildSize: 0.5,
+                    maxChildSize: 0.9,
+                    expand: false,
+                    builder:
+                        (BuildContext context, ScrollController scrollController) {
+                      return ShareForm(isOrgInd:false,);
+                    },
+
+                  );}),
+            child: Row(
+              children: [
+                Container(
+                  height:55,
+                  width: 70,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.green.shade200,
+                  ),
+                ),
+                Text('Share',
+                  style: TextStyle(
+                    fontFamily: 'Gotham',
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ///Request Icon and text
+          GestureDetector(
+            onTap: ()=>showModalBottomSheet(
+                isScrollControlled: true,
+                //barrierDismissible: true,
+                //semanticsDismissible: true,
+                barrierColor: Colors.black.withOpacity(0.2),
+                context: context,
+                builder: (BuildContext context){
+                  return DraggableScrollableSheet(
+                    initialChildSize: 0.9,
+                    minChildSize: 0.5,
+                    maxChildSize: 0.9,
+                    expand: false,
+                    builder:
+                        (BuildContext context, ScrollController scrollController) {
+                      return RequestForm(isOrgInd:false,);
+                    },
+
+                  );}),
+            child: Row(
+              children: [
+                Text('Request',
+                  style: TextStyle(
+                    fontFamily: 'Gotham',
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Container(
+                  height:55,
+                  width: 70,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.orange,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+        ],
+      ),*/
     );
   }
 }

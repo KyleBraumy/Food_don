@@ -22,7 +22,7 @@ class DatabaseService {
       var timestamp,String email,String profilePhotoUrl,
       String bio,String lname,String fName,String occupation,
       String address,String identify_as,String? works_at,String street_name,
-      String phone1,String phone2, String city
+      String phone1,String? phone2, String city
       ) async {
     return await usersRef.doc(uid).set({
       'Id':ID,
@@ -44,6 +44,17 @@ class DatabaseService {
       'City':city,
       'Contact 1':phone1,
       'Contact 2':phone2,
+    });
+  }
+
+
+  Future createUserInfo(String email,
+      ) async {
+    return await usersRef.doc(uid).set({
+      'Id':uid,
+      'Email':email,
+      'First Name':null,
+      'Last Name':null,
     });
   }
 
