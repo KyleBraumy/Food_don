@@ -327,7 +327,47 @@ buildProfilePosts();
 
                              )
                              )
-                                 :SizedBox(),
+                                 :GestureDetector(
+                               onTap:()=>
+                                   showModalBottomSheet(
+                                       isScrollControlled: true,
+                                       //barrierDismissible: true,
+                                       //semanticsDismissible: true,
+                                       barrierColor: Colors.black.withOpacity(0.2),
+                                       context: context,
+                                       builder: (BuildContext context){
+                                         return DraggableScrollableSheet(
+                                           initialChildSize: 0.3,
+                                           minChildSize: 0.3,
+                                           maxChildSize: 0.3,
+                                           expand: false,
+                                           builder:
+                                               (BuildContext context, ScrollController scrollController) {
+                                             return Column(
+                                               children: [
+                                                 ListTile(
+                                                   title: Text('Delete from timeline'),
+                                                   onTap: (){
+                                                     p_id=data['PostId'].toString();
+                                                     timelineDelete();
+                                                   },
+                                                 ),
+                                                 ListTile(
+                                                   title: Text('Delete Entirely'),
+                                                   onTap: (){
+                                                     p_id=data['PostId'].toString();
+                                                    deleteEntirely();
+                                                   },
+                                                 ),
+                                               ],
+                                             );
+                                           },
+
+                                         );
+                                       }
+                                   ),
+                               child:Icon(Icons.delete)
+                             ),
 
                             ///Price
                             Padding(
@@ -335,7 +375,7 @@ buildProfilePosts();
                               child: Container(
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(10),
-                                  color: data['Price Status'].toString()=="free"? Colors.green:Colors.orange,
+                                  color: data['Price Status'].toString().toLowerCase()=="free"? Colors.green:Colors.orange,
                                 ),
 
                                 ///Price
@@ -354,9 +394,6 @@ buildProfilePosts();
                             ),
                             ///If owner of the post is the currentuser he wont be allowed to send himself
                             ///a request hence the button will not show on his post
-
-
-
                           ],
                         ),
                         ///Description
@@ -374,7 +411,6 @@ buildProfilePosts();
                             mediaUrl:data['MediaUrl'],
                             description: data['Description'],
                             ownerId: data['OwnerID'],
-
                           ),
                           child: Container(
                             height: 300,

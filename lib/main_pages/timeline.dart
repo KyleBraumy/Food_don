@@ -115,7 +115,7 @@ getFreeTimeline()async{
 
   QuerySnapshot snapshot=
     await timelineRef
-    .where('Price Status', isEqualTo:'free')
+    .where('Price Status',isEqualTo:'free')
     .where('On Timeline', isEqualTo:true)
     .where('Donated', isEqualTo:false)
     .where('City',isEqualTo: _dropdownValue )

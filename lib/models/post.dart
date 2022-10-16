@@ -642,7 +642,7 @@ var new_unique_id;
                         child: Container(
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(10),
-                            color: pstatus.toString()=="free"? Colors.green:Colors.orange,
+                            color: pstatus.toString().toLowerCase()=="free"? Colors.green:Colors.orange,
                           ),
                           ///Price
                           child: FittedBox(

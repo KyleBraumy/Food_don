@@ -227,7 +227,7 @@ class _SideState extends State<Side> {
                   ),
                 ),
               ),
-
+/*
               ///Feebacks
               GestureDetector(
                 onTap: (){
@@ -258,7 +258,7 @@ class _SideState extends State<Side> {
                     ],
                   ),
                 ),
-              ),
+              ),*/
 
               Divider(thickness: 0.3,color: Colors.blue,),
             ],

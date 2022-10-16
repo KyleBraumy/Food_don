@@ -145,46 +145,48 @@ var imUrl;
       body: SingleChildScrollView(
         child:Column(
           children: <Widget>[
-            ImageSlideshow(
+           /* Container(
+              //height: size.height/2.7,
+              //width: size.width,
+              color: Colors.green,
+              child: CachedNetworkImage(
+                imageUrl:postMediaUrl!,
+                imageBuilder: (context, imageProvider) => Container(
+                  decoration: BoxDecoration(
+                    image: DecorationImage(
+                      image: imageProvider,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+                placeholder: (context, url) => CircularProgressIndicator(),
+                errorWidget: (context, url, error) => Icon(Icons.error),
+              ),
+            ),*/
+            Container(
+              height: size.height/3,
+              width: size.width,
+              color: Colors.green,
+              child: CachedNetworkImage(
+                imageUrl:postMediaUrl!,
+                imageBuilder: (context, imageProvider) => Container(
+                  decoration: BoxDecoration(
+                    image: DecorationImage(
+                      image: imageProvider,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+                placeholder: (context, url) => CircularProgressIndicator(),
+                errorWidget: (context, url, error) => Icon(Icons.error),
+              ),
+            ),
+   /*         ImageSlideshow(
               isLoop: true,
               height: 450,
                 children:[
-                  Container(
-                    //height: size.height/2.7,
-                    //width: size.width,
-                    color: Colors.green,
-                    child: CachedNetworkImage(
-                      imageUrl:postMediaUrl!,
-                      imageBuilder: (context, imageProvider) => Container(
-                        decoration: BoxDecoration(
-                          image: DecorationImage(
-                            image: imageProvider,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                      placeholder: (context, url) => CircularProgressIndicator(),
-                      errorWidget: (context, url, error) => Icon(Icons.error),
-                    ),
-                  ),
-                  Container(
-                    height: size.height/3,
-                    width: size.width,
-                    color: Colors.green,
-                    child: CachedNetworkImage(
-                      imageUrl:postMediaUrl!,
-                      imageBuilder: (context, imageProvider) => Container(
-                        decoration: BoxDecoration(
-                          image: DecorationImage(
-                            image: imageProvider,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                      placeholder: (context, url) => CircularProgressIndicator(),
-                      errorWidget: (context, url, error) => Icon(Icons.error),
-                    ),
-                  ),
+
+
                   Container(
                     height: size.height/3,
                     width: size.width,
@@ -205,7 +207,7 @@ var imUrl;
                   ),
                 ]
             ),
-
+*/
             ///Description
             ExpandablePanel(
                 collapsed: Text(''),

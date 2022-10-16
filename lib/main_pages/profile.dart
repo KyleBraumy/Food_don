@@ -1,3 +1,4 @@
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expandable/expandable.dart';
@@ -5,10 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/painting.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:sates/startup/wrapper.dart';
-import 'package:sates/widgets/header.dart';
-import 'package:smooth_star_rating_null_safety/smooth_star_rating_null_safety.dart';
 import 'package:titled_navigation_bar/titled_navigation_bar.dart';
 import 'package:uuid/uuid.dart';
 import '../models/requests.dart';
@@ -69,7 +67,7 @@ class _ProfileState extends State<Profile> {
     getProfileRequests();
     //getProfileReviews();
     buildProfileHeader();
-    getRating();
+    //getRating();
     //buildProfileRate();
     //checkUserPermission();
     print('Profile Init');
@@ -77,6 +75,7 @@ class _ProfileState extends State<Profile> {
   }
 
 
+/*
 
 
   getRating()async{
@@ -92,6 +91,7 @@ class _ProfileState extends State<Profile> {
       }).catchError((e){
         print(e);
       });
+
       await buildProfileHeader();
      QuerySnapshot snapshot = await ratingsRef
           .doc(widget.profileId)
@@ -105,6 +105,7 @@ class _ProfileState extends State<Profile> {
       });
 
   }
+*/
 
 
   getProfilePosts() async {
@@ -332,6 +333,7 @@ sendReview({String? content,String? from, String? to, required DateTime Timestam
     );
 }
 
+/*
 ///rate
   rate({required String user_rate, required String rate,required String rvalue,}){
     ratingsRef
@@ -355,6 +357,7 @@ sendReview({String? content,String? from, String? to, required DateTime Timestam
 
 
   }
+*/
 
 ///building container for reviews from firestore
 buildProfileReviews(){
@@ -569,7 +572,6 @@ buildProfileReviews(){
       .doc(newReviewId)
       .delete();
   }
-
 
 
   handleDeleteReview()async{
@@ -1123,7 +1125,7 @@ buildProfileReviews(){
                 null
               ),
             ),
-            Padding(
+           /* Padding(
               padding: const EdgeInsets.only(left:20.0,top: 7,bottom:2),
               child: GestureDetector(
                 onTap:()=>rateDialog(),
@@ -1147,13 +1149,13 @@ buildProfileReviews(){
                   ],
                 ),
               ),
-            ),
-            Padding(
+            ),*/
+           /* Padding(
               padding: const EdgeInsets.only(left:20.0,bottom:14),
               child: CustomText5(gUser.no_rate_ppl.toString()+' people rated',
               FontStyle.italic,
               ),
-            ),
+            ),*/
 
           ],
         );
@@ -1255,6 +1257,7 @@ buildProfileReviews(){
     );
   }
 
+/*
   rateDialog(){
     showDialog(
         context: context,
@@ -1293,12 +1296,20 @@ buildProfileReviews(){
         }
     );
   }
+*/
 
 
+/*
 ///handling rating
   handleRating()async{
   await getRating();
+  if(o_rate==null)
+    {
+      setState(()=>o_rate="0");
+    }
 await ratingsCount1;
+  old_rate1==null?'0':old_rate1;
+  o_rate==null?"0":o_rate;
  final double result=(old_rate1! - o_rate1! + new_rate!);
  final double result1=((result/ratingsCount1!)).toDouble();
  await result;
@@ -1308,26 +1319,32 @@ await ratingsCount1;
          rate:new_rate!.toString(),
          user_rate:new_rate!.toString(),
          rvalue:(result1*5).toString(),
-         /*(
+         */
+/*(
                (
                    ((old_rate1! + new_rate! - o_rate1!)~/ratingsCount!.toDouble()
                )*5).toDouble()
-           ).toString()*/
+           ).toString()*//*
+
        );
      }else{
        rate(
            rate:new_rate!.toString(),
            user_rate:(result).toString(),
            rvalue:(result1*5).toString(),
-             /*  (
+             */
+/*  (
                    (
                        (old_rate1! + new_rate! - o_rate1!)~/ratingsCount!.toDouble())*5
                ).toDouble()
-           ).toString()*/
+           ).toString()*//*
+
            );//((old_rate1! - o_rate1! + new_rate!)~/ratingsCount1!).toString());
-         /*  user_rate:(old_rate1! - o_rate1! + new_rate!).toString(),
+         */
+/*  user_rate:(old_rate1! - o_rate1! + new_rate!).toString(),
            rate:new_rate.toString() ,
-           rvalue: ((old_rate1!- o_rate1! + new_rate!)~/ratingsCount1!).toString());*/
+           rvalue: ((old_rate1!- o_rate1! + new_rate!)~/ratingsCount1!).toString());*//*
+
      }
 
 setState((){
@@ -1335,6 +1352,7 @@ setState((){
 });
    print((((old_rate1! + new_rate! - o_rate1!)~/ratingsCount!).toDouble()).toString()+ 'Yes');
   }
+*/
 
 
 
@@ -1355,9 +1373,6 @@ setState((){
       reviewID= Uuid().v4();
       isOpen=!isOpen;
     });
-
-    rateDialog();
-
   }
 
   confirmDelete()async{

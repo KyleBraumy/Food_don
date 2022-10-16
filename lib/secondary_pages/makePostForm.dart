@@ -205,7 +205,7 @@ class _ShareFormState extends State<ShareForm> {
          String mediaUrl=await uploadImage(file);
          await createFirestorePostDetails(
            username: _username,
-           pstatus: _status,
+           pstatus: _status.toLowerCase(),
            timestamp:timestamp,
            city:city,
            mediaUrl:mediaUrl,
@@ -216,7 +216,7 @@ class _ShareFormState extends State<ShareForm> {
          );
         await addPostTimeline(
            username: _username,
-           pstatus: _status,
+           pstatus: _status.toLowerCase(),
            timestamp:timestamp,
            city:city,
            mediaUrl:mediaUrl,
@@ -877,7 +877,7 @@ class _RequestFormState extends State<RequestForm> {
         pstatus: price.toString()=="Free"?null:_status,
         timestamp:timestamp,
         expire_at:timestamp.add(Duration(days:1)),
-       city:city,
+        city:city,
         description:_description,
         requested: result1,
         requested_as: result,
@@ -1397,7 +1397,7 @@ class _RequestFormState extends State<RequestForm> {
                   children: [
                     Padding(
                       padding:  EdgeInsets.only(top:30.0,bottom: 10),
-                      child: CustomText('What do you wish to share?',null),
+                      child: CustomText('What do you wish to request?',null),
                     ),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,

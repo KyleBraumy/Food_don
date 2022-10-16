@@ -52,6 +52,7 @@ class DatabaseService {
       ) async {
     return await usersRef.doc(uid).set({
       'Id':uid,
+      'Identify_as':null,
       'Email':email,
       'First Name':null,
       'Last Name':null,
